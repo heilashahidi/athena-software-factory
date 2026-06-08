@@ -1,3 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Athena Digital — Software Factory Architecture</title>
+<style>
+  :root { --ink:#1a1a18; --muted:#5f5e5a; --accent:#0F6E56; --violet:#26215C;
+          --bg:#fbfbfa; --code-bg:#f4f4f2; --border:#e6e5e1; }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin:0; background:var(--bg); color:var(--ink);
+    font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 60px 28px 140px; }
+  h1 { font-size: 2.2rem; line-height:1.12; margin: 0 0 .35em; letter-spacing:-.022em; }
+  h2 { font-size: 1.5rem; margin: 2.6em 0 .6em; padding-top:1.3em;
+       border-top:1px solid var(--border); letter-spacing:-.012em; }
+  h3 { font-size: 1.18rem; margin: 2em 0 .4em; color:var(--violet); letter-spacing:-.008em; }
+  h4 { font-size: 1.02rem; margin: 1.5em 0 .3em; }
+  p, li { color:#2a2a28; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  hr { border:none; border-top:1px solid var(--border); margin: 2.6em 0; }
+  table { border-collapse: collapse; width:100%; margin:1.3em 0; font-size:.92rem; }
+  th, td { border:1px solid var(--border); padding:9px 13px; text-align:left; vertical-align:top; }
+  th { background:#f1efe8; font-weight:600; }
+  tr:nth-child(even) td { background:#fafaf8; }
+  code { background:var(--code-bg); padding:.12em .36em; border-radius:4px; font-size:.86em;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  pre { background:var(--code-bg); border:1px solid var(--border); border-radius:8px;
+    padding:14px 16px; overflow:auto; font-size:.83rem; line-height:1.55; }
+  pre code { background:none; padding:0; font-size:1em; }
+  blockquote { margin:1.3em 0; padding:.5em 1.1em; border-left:3px solid var(--accent);
+    color:#3a3a37; background:#f5f8f6; border-radius:0 6px 6px 0; }
+  blockquote p { margin:.4em 0; }
+  .mermaid { margin: 1.6em 0; text-align:center; }
+  .mermaid svg { max-width:100%; height:auto; }
+  strong { color: var(--ink); font-weight:650; }
+  #content.loading { color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap loading" id="content">Rendering…</div>
+<script type="text/markdown" id="md">
 # Athena Digital — Software Factory Architecture
 
 A spec-driven, skill-composed, eval-gated system that turns a feature specification into a reviewable, deployable pull request across seven products. Built on one organizing decision: every worker is the same model; only the harness differs. The conductor is deterministic code, the plan is an explicit artifact, and nothing advances a stage without passing an eval.
@@ -593,3 +638,22 @@ Defer to later phases:
 Every node in the master diagram has a slot for these without redrawing the architecture.
 
 If the pilot products are genuinely legacy rather than clean brownfield, Phase 0 — making each repo reproducibly runnable — precedes generation, and impact analysis, characterization tests, and curated exemplars join from day one with the trust ladder starting fully gated. Budget for Phase 0 explicitly: standing up a stubborn legacy environment can eat as much of the 60 days as building the factory itself, so it may be wiser to pick the two most tractable repos for v1 and defer the gnarliest one until the hardening layer is proven. Concretely: weeks 1–2 are a Phase-0 spike on both pilot repos with a hard go/no-go — a repo that cannot be made reproducibly runnable in two weeks is swapped or v1 drops to one product, and v1 success is defined on whatever clears the gate. Choosing the tractable repos first is deliberate risk management; the regulated, high-blast-radius repo is Phase 2, after the hardening layer has earned trust.
+</script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script type="module">
+import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+const el = document.getElementById('content');
+el.classList.remove('loading');
+el.innerHTML = marked.parse(document.getElementById('md').textContent);
+el.querySelectorAll('code.language-mermaid').forEach(c => {
+  const div = document.createElement('div');
+  div.className = 'mermaid';
+  div.textContent = c.textContent;
+  c.closest('pre').replaceWith(div);
+});
+mermaid.initialize({ startOnLoad:false, theme:'base', securityLevel:'loose',
+  themeVariables:{ fontFamily:'inherit', fontSize:'14px' } });
+await mermaid.run({ querySelector:'.mermaid' });
+</script>
+</body>
+</html>
