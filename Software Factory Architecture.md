@@ -1,18 +1,18 @@
 # Athena Digital — Software Factory Architecture
 
-A spec-driven, skill-composed, eval-gated system that turns a feature specification into a reviewable, deployable pull request across seven products. Built on one organizing decision: every worker is the same model; only the harness differs. The conductor is deterministic code, the plan is an explicit artifact, and nothing advances a stage without passing an eval.
+Spec-driven, skill-composed, eval-gated: turns a feature spec into a reviewable, deployable PR across seven products. One organizing decision — every worker is the same model; only the harness differs. The conductor is deterministic code, the plan is an explicit artifact, nothing advances a stage without passing an eval.
 
-Each `mermaid` block below is independent and can be pasted into any mermaid renderer (mermaid.live, GitHub, VS Code).
+Each `mermaid` block is independent (paste into mermaid.live, GitHub, or VS Code). Sections follow the spine: spec → codebase intelligence → orchestration → workers → verification → review → PR, with the learning loop feeding back.
 
 ---
 
 ## 1. Master system architecture
 
-A subsystem-level overview: the spec-to-PR spine (solid) with codebase intelligence feeding context into it and the learning loop feeding improvements back (dotted). Every node here expands into its own diagram — orchestration as the generation DAG (§2), the harnessed worker (§3), the learning loop as the flywheel (§4), and the eval layer of verification (§8); spec authoring, codebase intelligence, the full verification stack, and the review interface each get a diagram in the component reference below.
+The spec-to-PR spine (solid), with codebase intelligence feeding context in and the learning loop feeding improvements back (dotted). Every node expands into its own section below.
 
-Where this sits on the autonomy ladder: Athena today is at rung two — 94% tool adoption is pair-programming, which is exactly why cycle time is stuck at +11%. The factory moves the CRUD pattern to rung five, where agents plan, build, verify, and assemble while humans stay on the gates. The trust ladder throughout this document is that climb made incremental: a gate collapses only when a production metric earns it, never on a schedule.
+**Autonomy ladder:** Athena sits at rung two — 94% tool adoption is pair-programming, which is exactly why cycle time is stuck at +11%. The factory moves the CRUD pattern to rung five: agents plan, build, verify, and assemble while humans stay on the gates. The trust ladder is that climb made incremental — a gate collapses only when a production metric earns it, never on a schedule.
 
-Why build rather than buy or wait: the model is a commodity by design, so the durable asset is the layer a vendor cannot own — the seven-repo convention and exemplar index, the golden set grown from Athena's own production failures, and the eval harness that encodes what "correct at Athena" means, regulated gates included. Vendors optimize the 22% (writing code); this targets the 78% (Athena's conventions, gates, and compliance). The bet is reversible: if a vendor ships the orchestration, the specs, skills, and evals port onto it. Buy the model, build the harness around the constraints.
+**Build, don't buy or wait:** the model is a commodity by design, so the durable asset is the layer a vendor cannot own — the seven-repo convention and exemplar index, the golden set grown from Athena's own production failures, and the eval harness encoding what "correct at Athena" means. Vendors optimize the 22% (writing code); this targets the 78% (conventions, gates, compliance). Reversible: if a vendor ships orchestration, the specs, skills, and evals port onto it.
 
 ```mermaid
 flowchart LR
@@ -42,9 +42,98 @@ flowchart LR
 
 ---
 
-## 2. Generation pipeline — the plan DAG
+## 2. Spec authoring (source of truth)
 
-The conductor compiles the spec into this dependency graph and walks it. Stage types and dependencies mirror the case study's generation plan. Each stage passes its own eval gate before feeding dependents; `config` is independent and runs in parallel. After automated verification passes, a risk-weighted human QA review signs off or sends the feature back with added cases.
+The spec is the human's primary surface and the contract everything derives from. A brief plus a pattern template compiles to a typed spec; the validator gates it on completeness and consistency; a human approves it; the versioned spec is the audit trail everything traces to.
+
+```mermaid
+flowchart TB
+  brief[/"Product brief · Linear / Jira / Notion"/] --> compiler["Spec compiler · brief to typed spec"]
+  template[("Pattern template · CRUD / Integration / ...")] --> compiler
+  compiler --> spec[/"Formal spec · fields + acceptance criteria"/]
+  spec --> split{"Oversized?"}
+  split -->|"yes"| smaller["Split into one-feature specs"]
+  smaller -.-> spec
+  split -->|"no"| validate{"Validator · complete + consistent vs codebase"}
+  intel[["Codebase intelligence"]] -.->|"structural index"| validate
+  validate -->|"incomplete / conflict"| back["Back to author"]
+  back -.-> compiler
+  validate -->|"valid"| approve{"Human gate · approve spec"}
+  approve --> versioned[("Versioned spec + audit trail")]
+  versioned --> plan[/"to Plan generator"/]
+  amend["Worker decision off-spec"] -.->|"proposed amendment"| approve
+
+  classDef stage fill:#E1F5EE,stroke:#0F6E56,color:#04342C;
+  classDef store fill:#EEEDFE,stroke:#534AB7,color:#26215C;
+  classDef io fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A;
+  classDef human fill:#FAEEDA,stroke:#854F0B,color:#412402;
+  classDef warn fill:#FCEBEB,stroke:#A32D2D,color:#501313;
+  class compiler,smaller stage
+  class template,versioned,intel store
+  class brief,spec,plan io
+  class approve human
+  class back,amend warn
+```
+
+- **Compiler:** natural-language brief → typed, schema-validated spec (`product`, `pattern`, `entity`, `fields`, `permissions`, `audit`, `integrations`, `ui`).
+- **Acceptance criteria (the keystone):** explicit, testable behavioral expectations, not just structural fields — so spec-derived tests come from intent, not entity shape, and change fail rate gets a precise per-spec definition (a failed change violates the spec's acceptance criteria in production).
+- **Validator:** a linter gates compilation — missing acceptance criteria, underspecified fields, or a missing permission gate means no plan and no code.
+- **Consistency gate (same validator):** also lints the spec against codebase intelligence's structural index, so a spec conflicting with what exists (duplicate entity/table, permission already defined) is caught at spec time — the cheap upstream half of brownfield impact analysis.
+- **Templates per pattern:** CRUD / Integration / Workflow / Analytics each have a template the brief fills in — the spec-side analog of skills.
+- **Versioning & traceability:** every spec is versioned; every generated file maps to a spec field and every eval to an acceptance criterion, so the generation report shows what produced what.
+- **Owns the audit trail:** spec + traces + generation report is the compliance record for the SOC 2 and HIPAA products.
+- **Amendment rule:** any worker decision not covered by the spec surfaces as a proposed amendment for human approval, so the spec never drifts from what ships.
+- **Batch discipline:** one spec = one feature = one deployable PR; the compiler splits oversized specs — DORA's batch-size discipline enforced upstream of any code.
+
+---
+
+## 3. Codebase intelligence (one system, seven repos)
+
+Learns each product's conventions so output reads as native. One indexer feeds four stores; hybrid retrieval serves them as context to the spine; two loops keep it fresh — re-index on merge, and exemplars graduated by the learning loop.
+
+```mermaid
+flowchart TB
+  repos[/"Seven repos · three languages"/] --> indexer["Indexer · language parsers feed one unified schema"]
+  indexer --> struct[("Structural index · symbol + dependency graph")]
+  indexer --> exemplar[("Exemplar store · canonical pattern per repo + engine")]
+  indexer --> facts[("Architectural facts · Vault, permissions, audit, tables")]
+  indexer --> profile[("Product profiles · stable conventions, per-product prompt")]
+
+  struct --> retrieval{{"Retrieval · hybrid: semantic + graph + exemplar"}}
+  exemplar --> retrieval
+  facts --> retrieval
+  profile --> retrieval
+  retrieval -->|context| consumers[/"Spec validator · Plan generator · Workers"/]
+
+  merge["Merge to a repo"] -.->|"re-index hook"| indexer
+  learn[["Learning loop"]] -.->|exemplars| exemplar
+  cold{"Cold start · validate conventions once"} -.-> profile
+
+  classDef proc fill:#E1F5EE,stroke:#0F6E56,color:#04342C;
+  classDef store fill:#EEEDFE,stroke:#534AB7,color:#26215C;
+  classDef io fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A;
+  classDef human fill:#FAEEDA,stroke:#854F0B,color:#412402;
+  class indexer,retrieval proc
+  class struct,exemplar,facts,profile store
+  class repos,consumers,merge io
+  class learn store
+  class cold human
+```
+
+- **Indexer:** language-specific parsers feed one unified schema, so seven repos in three languages are one system.
+- **Structural index:** symbol + dependency graph — answers "where does auth get checked," not just text similarity.
+- **Exemplar store:** the canonical implementation of each pattern per repo, keyed by language and DB engine (Postgres, MongoDB, DynamoDB, Redis diverge most at migration/persistence, so there's one migration skill per engine). This is what makes output look like a teammate wrote it.
+- **Architectural facts:** how this product does Vault, permissions, audit logging, table components, staging config.
+- **Product profiles:** stable conventions baked into a per-product system prompt; volatile feature context retrieved at generation time.
+- **Retrieval:** hybrid — semantic + structural graph + exemplar lookup.
+- **Cold start:** index a repo, generate a conventions report, validate once with an engineer.
+- **Freshness:** re-index on merge via a CI hook — a stale index is the likeliest silent cause of falling below the pass bar.
+
+---
+
+## 4. Orchestration
+
+Deterministic conductor over an explicit plan — traceable where a multi-agent swarm is not. It compiles the spec into a dependency graph and walks it; each stage passes its eval gate before feeding dependents; `config` runs in parallel with the `migrate → api → frontend` chain.
 
 ```mermaid
 flowchart TB
@@ -68,11 +157,18 @@ flowchart TB
   qa -->|add cases / reject| tests
 ```
 
+- **Plan generator:** spec → typed task DAG. The only creative planning step; output is structured and human-approved.
+- **Conductor:** deterministic DAG executor — walks dependencies, dispatches stages, enforces typed handoff, routes failures. Code, not a model.
+- **Typed artifacts between stages:** the frontend stage receives the API-contract artifact, not a prose handoff — the fix for sequential-handoff brittleness.
+- **Isolated env per run:** VM/worktree plus isolated DB, cache, and state, so CI runs in the loop and parallel runs never collide.
+- **Failure recovery:** per-stage bounded retries, then human escalation, with checkpointing so a single stage re-runs in isolation.
+- **Cross-run scoping:** the conductor serializes or merge-queues runs whose write sets overlap, so two concurrent features never land conflicting diffs — env isolation prevents state collision, this prevents source collision.
+
 ---
 
-## 3. Anatomy of a harnessed worker — spec, skills, evals
+## 5. Harnessed worker
 
-Every stage in the DAG is one of these: the same shared model, a harness of context, memory, tools, and the skills relevant to that stage and product. Output is scored against the spec before it can advance.
+Same model, different jacket. Every DAG stage is one invocation of the shared LLM with a stage-specific harness of context, memory, tools, and skills; output is scored against the spec before it can advance. Skills are the unit of reuse.
 
 ```mermaid
 flowchart TB
@@ -90,11 +186,95 @@ flowchart TB
   evalgate -->|fail| human["Retry / human"]
 ```
 
+- **Skill library:** packaged, versioned, testable units of recurring work — instructions, exemplars, helper tools, and each skill's own eval. Pattern skills (CRUD anatomy) plus product-convention skills (Vault field, permission gate, table component, audit logging).
+- **Shared infrastructure:** skills, harnesses, exemplars, and evals are versioned and reviewed like code, owned centrally — not private per-engineer factories.
+- **Scaling:** a new pattern means authoring its skills; a new product means reusing pattern skills plus authoring convention skills. Never rebuilding the system.
+- **Context connectors (enablers):** give workers reach into the systems where the 78% lives. Inbound — Linear/Jira/Notion into the spec compiler, so a brief is pulled from where PMs write it (reaching into Requirements & Design, 18%). Outbound — Datadog/incident tool + GitHub into the flywheel, so production incidents and merged-PR comments feed evals and memory. Each connector is a tool, granted or denied per stage and product; regulated repos get a tighter set; secrets and PHI never transit. MCP is the substrate, so adding a source (Slack, PagerDuty, `athena-cli`) is config, not a new subsystem.
+
 ---
 
-## 4. The improvement flywheel
+## 6. Verification (CI in the loop)
 
-Every run is traced and every deploy emits production outcomes — the four DORA delivery metrics, defined in the performance-metrics section below. Both feed the evals. Repeated failures become guardrails and skills, accepted work becomes the taste layer, and production signals — incidents and failed changes — are the highest-signal feedback of all. All of it flows back to improve the next run.
+Woven in per-stage, with the product's real CI as the source of truth. A defense-in-depth stack: cheap deterministic checks first, then conformance and a non-skippable security floor, then spec-derived tests and real CI, then a risk-weighted human QA gate.
+
+```mermaid
+flowchart TB
+  artifact[/"Stage artifact"/] --> checks["Per-stage checks · compile · lint · typecheck"]
+  checks --> conform["Pattern conformance · LLM judge + static vs exemplar"]
+  conform --> sec["Security policy gate · deterministic floor: SAST, migration linter, OPA"]
+  sec --> ui["UI verification · browser + screenshot, frontend stage"]
+  ui --> tests["Spec-derived tests · from acceptance, not implementation"]
+  tests --> ci{"Real CI in loop · green?"}
+  ci -->|"fail"| retry["Bounded retry, then escalate to human"]
+  retry -.-> artifact
+  ci -->|"pass"| qa{"Human QA · risk-weighted, live env"}
+  qa -->|"sign off"| pr[/"to Review / PR"/]
+  qa -->|"add cases / reject"| tests
+  qa -.->|"findings"| learn[["Learning loop · golden set + rules"]]
+
+  classDef stage fill:#E1F5EE,stroke:#0F6E56,color:#04342C;
+  classDef store fill:#EEEDFE,stroke:#534AB7,color:#26215C;
+  classDef io fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A;
+  classDef human fill:#FAEEDA,stroke:#854F0B,color:#412402;
+  classDef warn fill:#FCEBEB,stroke:#A32D2D,color:#501313;
+  class checks,conform,sec,ui,tests stage
+  class artifact,pr io
+  class qa human
+  class retry warn
+  class learn store
+```
+
+- **Per-stage checks:** compile, lint, typecheck — a stage doesn't complete until its output is syntactically valid and type-safe.
+- **Pattern conformance:** LLM judge plus static checks against the retrieved exemplar.
+- **Security policy gate:** a deterministic, non-skippable floor (policy code, not the judge) — SAST/semgrep asserting a permission check per endpoint, a migration linter blocking unguarded `DROP`/destructive `ALTER` and requiring a reversible down-migration, an OPA-style engine over the diff. The judge is a second layer, never a substitute; semantic gaps (a permission check on the wrong resource) are caught by a spec-derived test plus mandatory human review on regulated output.
+- **UI verification:** browser automation plus screenshot/state inspection for the frontend stage — the pass-rate bottleneck, since UI is harder to verify than backend.
+- **Spec-derived tests:** generated from the spec independent of the implementation, so they don't mirror its mistakes.
+- **Real CI:** the existing pipeline runs before a PR is emitted. Because CI runs in the loop, "passes CI on first run" needs a precise definition — the v1 metric is the % of features reaching green within the bounded retry budget without escalation; independently, the human's first CI run on the emitted PR should sit near 100%, any gap being an environment-parity bug. The 80% bar is the former; a parity check samples emitted PRs against the product's CI to alarm on drift. This is the single biggest lever on the pass target.
+- **Human QA (in the loop):** after automated checks pass, a risk-weighted gate. The reviewer reviews artifacts (test plan, coverage/pass report, UI recordings) and does targeted acceptance testing against a live deployment — lightweight sign-off for low-risk CRUD, mandatory hands-on for regulated/high-blast-radius. Distinct from code review: QA asks "does it behave correctly," the risk router asks "is the code right." The reviewer signs off, adds cases, or rejects to the tests worker; findings become golden-set entries and rules — the highest-signal input to factory improvement.
+
+---
+
+## 7. Review & output
+
+Progressive disclosure with intervention at every stage and a trust ladder that tightens over time. The risk router routes the assembled change by blast radius; high-risk output gets a red-team pass and mandatory human review; the emitted PR carries provenance so the human can meaningfully certify it.
+
+```mermaid
+flowchart TB
+  assembled[/"Assembled change + generation report"/] --> router{"Risk router · by blast radius"}
+  router -->|"low-risk CRUD"| light["Light review · clean diff + provenance"]
+  router -->|"auth / payments / migrations / regulated"| redteam["Red-team agent · adversarial pass"]
+  redteam --> mandatory["Mandatory human review"]
+  light --> human{"Human gate · approve / correct / re-run"}
+  mandatory --> human
+  human -->|"approve"| pr[/"Reviewable PR"/]
+  human -.->|"re-run"| factory["Back through factory"]
+  cfr[("Change-fail-rate")] -.->|"earns gate collapse"| router
+  coherence["Standing coherence pass"] -.->|"refactor specs"| factory
+
+  classDef stage fill:#E1F5EE,stroke:#0F6E56,color:#04342C;
+  classDef store fill:#EEEDFE,stroke:#534AB7,color:#26215C;
+  classDef io fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A;
+  classDef human fill:#FAEEDA,stroke:#854F0B,color:#412402;
+  classDef warn fill:#FCEBEB,stroke:#A32D2D,color:#501313;
+  class light,factory,coherence stage
+  class redteam warn
+  class mandatory,human human
+  class assembled,pr io
+  class cfr store
+```
+
+- **Risk router (agentic code owner):** low-risk diffs get light review; auth, payments, migrations, and regulated repos get mandatory human review.
+- **Red-team agent:** an adversarial pass before a human engages, for high-risk and regulated output.
+- **Review interface:** clean diffs, clear commits, and a generation report with provenance ("matched the Vault-client pattern from billing-service") — what converts a black box into something a senior trusts.
+- **Trust ladder:** v1 gates everywhere; as the dashboard proves the pass rate, gates collapse toward plan-approval plus final-PR review. Regulated repos keep a permanent floor.
+- **Accountability:** a human gate is accountability only if the human can meaningfully review — hence reviewability by design. The approving engineer is accountable; the platform team owns the machinery, as with any internal CI/CD. The factory shifts what the human certifies from authorship to behavior; it doesn't move liability onto the model.
+- **Architectural coherence (human-owned):** per-feature batch discipline risks local-optimum drift over many runs. A standing coherence-pass agent diffs accumulated output against the architectural facts and exemplars, flags divergence and duplication for an architect, and proposes refactor specs that run back through the factory. The factory surfaces drift; the human owns the call.
+
+---
+
+## 8. Learning loop
+
+The flywheel that turns a static pipeline into a self-improving one. Every run is traced and every deploy emits the four DORA outcomes; both feed the evals. Repeated failures become guardrails and skills, accepted work becomes the taste layer, and production failures are the highest-signal feedback — all flowing back to the next run.
 
 ```mermaid
 flowchart LR
@@ -116,36 +296,30 @@ flowchart LR
   class traces,evals,dash,rules,memory,review learn
 ```
 
+- **Trace store:** structured spans (OpenTelemetry-style) on every tool call, viewable at worker/supervisor/manager levels. Spans decompose lead time per stage, so the factory continuously reproduces the case study's time study (Exhibit A) and shows which stage owns the cycle time.
+- **Eval suite:** a curated golden set (known-good specs + PRs) plus harvested traces; deterministic checks for hard criteria, LLM judge for conformance.
+- **Dashboard:** leading indicators + DORA outcomes, trended per product and pattern.
+- **Emergent rules engine:** repeated failures become guardrails; a recurring correction graduates into a skill. Sits on the hardcoded safety floor.
+- **Memory & taste store:** accepted diffs, transcripts, screenshots, and review decisions — sharpens the exemplars retrieval serves.
+- **Production signals:** each deployed change emits DORA back into evals and memory; a production failure becomes a golden-set entry and a rule — the loop closing past the PR to production reality.
+- **Lifecycle automations:** the factory closes its own loops. Flagship: stale feature-flag cleanup — once a flag is fully rolled out, a fast-lane removal spec runs through the same machinery to delete it and its dead branches. The template for any recurring chore the traces surface (dependency bumps, config drift, log triage).
+
 ---
 
-## 5. Spec-driven lifecycle — human-in-the-loop
+## 9. Spec-driven lifecycle — human-in-the-loop
 
-The temporal view: where the human approves, where context is pulled, how a stage failure is handled inside the loop, and the two distinct human gates at the end — QA sign-off (does it behave correctly) followed by risk-routed code review (is the code right).
-
-The lifecycle, step by step:
+The temporal view: where the human approves, where context is pulled, how a stage failure is handled, and the two end gates — QA sign-off (does it behave correctly) then risk-routed review (is the code right).
 
 1. Engineer sends the product brief to the spec compiler.
-2. The spec compiler returns the formal, typed spec.
-3. **Human gate** — the engineer approves the spec.
-4. The conductor requests plan context from codebase intelligence.
-5. Codebase intelligence returns exemplars, the product profile, and architectural facts.
-6. The conductor returns the generation plan (the DAG) to the engineer.
-7. **Human gate** — the engineer approves the plan; nothing runs before the migrate gate.
-8. **Generation loop** — for each stage in dependency order:
-   - The conductor dispatches the stage to a harnessed worker with its skills.
-   - The worker retrieves feature context from codebase intelligence.
-   - The worker returns the stage artifact.
-   - The conductor runs stage checks and CI in the loop.
-   - On pass the stage is green; on fail it retries within bounds or escalates to a human.
-9. **QA review (human gate)**:
-   - The conductor sends the test plan, results, screenshots, and a live environment to the QA reviewer.
-   - The reviewer does exploratory and acceptance testing.
-   - On sign-off it is approved; otherwise the reviewer adds cases or rejects, sending it back to the tests worker.
-10. The conductor sends the assembled PR to the risk router.
-11. The risk router routes by risk, surfacing diffs and provenance to the engineer.
-12. **Human gate** — the engineer approves, corrects, or re-runs.
-
-The same flow as a diagram (renders where Mermaid is supported):
+2. The compiler returns the formal, typed spec.
+3. **Human gate** — approve the spec.
+4. The conductor requests plan context from codebase intelligence, which returns exemplars, profile, and architectural facts.
+5. The conductor returns the generation plan (the DAG).
+6. **Human gate** — approve the plan; nothing runs before the migrate gate.
+7. **Generation loop** — per stage in dependency order: the conductor dispatches to a harnessed worker, which retrieves context and returns the artifact; the conductor runs stage checks and CI in the loop; on pass the stage is green, on fail it retries within bounds or escalates.
+8. **QA review (human gate):** the conductor sends the test plan, results, screenshots, and a live environment; the reviewer does exploratory and acceptance testing; sign-off approves, otherwise it adds cases or rejects back to the tests worker.
+9. The conductor sends the assembled PR to the risk router, which routes by risk with diffs and provenance.
+10. **Human gate** — approve, correct, or re-run.
 
 ```mermaid
 sequenceDiagram
@@ -200,7 +374,73 @@ sequenceDiagram
 
 ---
 
-## 6. Legacy change flow — brownfield surgery
+## 10. Skill lifecycle
+
+Skills are the unit of reuse, so creation is a defined workflow, not one-time authoring. A skill is born hand-authored or graduated from traces, passes its own eval set and human review, runs in shadow before going active, and is retired when it underperforms.
+
+```mermaid
+flowchart LR
+  source["Authored or graduated"] --> validate{"Eval set passes?"}
+  validate -->|no| source
+  validate -->|yes| review{"Human review · version"}
+  review --> shadow["Shadow · output compared, not shipped"]
+  shadow --> active["Active in skill library"]
+  active --> use["Loaded into harnesses"]
+  use --> measure[("Measured · evals + attributed DORA")]
+  measure -.->|repeated correction| source
+  measure -.->|underperforms| deprecate["Deprecate / retire"]
+
+  classDef path fill:#E1F5EE,stroke:#0F6E56,color:#04342C;
+  classDef gate fill:#FAEEDA,stroke:#854F0B,color:#412402;
+  classDef store fill:#EEEDFE,stroke:#534AB7,color:#26215C;
+  classDef warn fill:#FCEBEB,stroke:#A32D2D,color:#501313;
+  class source,shadow,active,use path
+  class validate,review gate
+  class measure store
+  class deprecate warn
+```
+
+- **Origin:** hand-authored for a known recurring task, or graduated when the emergent-rules engine sees the same correction recur above a threshold.
+- **Anatomy:** instructions, exemplars, helper tools, and its own eval set. No eval, no entry.
+- **Validation gate:** must pass its eval set against the golden cases before promotion.
+- **Review & versioning:** reviewed like code and versioned; product profiles pin a known-good version, so one product can stay stable while others adopt a newer one.
+- **Promotion:** candidate → shadow (output compared, not shipped) → active, so it earns trust on real work before gating anything.
+- **Regression safety:** changing a skill or swapping the model re-runs its evals; no version ships if scores drop.
+- **Measurement & retirement:** each skill carries its eval scores plus attributed lead time and change fail rate; consistent underperformers are retired.
+- **Ownership:** shared central infrastructure, never private per-engineer copies.
+
+---
+
+## 11. Eval architecture
+
+Evals are the load-bearing layer: because the brain is a stochastic LLM, evals convert nondeterministic generation into a gated, measurable, improvable system — nothing advances without passing one, and each harness carries its stage's eval as its definition of done. One governed golden set feeds a harness that gates four levels, and the golden set grows from every QA finding and production failure.
+
+```mermaid
+flowchart LR
+  golden[("Golden set + acceptance criteria")] --> harness["Eval harness · deterministic + judge"]
+  harness --> skillE["Per-skill · gates promotion"]
+  harness --> stageE["Per-stage · gates the DAG"]
+  harness --> featureE["Per-feature · gates the PR"]
+  harness --> factoryE["Per-factory · DORA + trust ladder"]
+  feedback["Human QA + prod failures"] -.->|grow| golden
+
+  classDef store fill:#EEEDFE,stroke:#534AB7,color:#26215C;
+  classDef proc fill:#E1F5EE,stroke:#0F6E56,color:#04342C;
+  classDef level fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A;
+  class golden,feedback store
+  class harness proc
+  class skillE,stageE,featureE,factoryE level
+```
+
+- **Four levels, each a gate:** per-skill (library entry), per-stage (between DAG stages), per-feature (the verify gate — real CI + spec-conformance, the 80% bar), per-factory (dashboard + DORA, gating trust-ladder collapse).
+- **Two methods:** deterministic checks for hard criteria (compile, lint, types, CI, security policy, characterization) and an LLM judge for fuzzy criteria (conformance, acceptance satisfaction, "would a senior say a teammate wrote this").
+- **Golden set (ground truth):** curated, versioned specs paired with known-good PRs plus each spec's acceptance criteria — shared central infrastructure, grown from every QA finding and production failure.
+- **Trusting the judge:** the judge is itself eval'd against human decisions on a held-out set and re-checked when the model changes, so a drifting judge can't silently corrupt the gates.
+- **Eval-driven:** the eval is written with the acceptance criteria and each skill, before generation — the factory knows what correct means before it builds.
+
+---
+
+## 12. Legacy change flow — brownfield surgery
 
 When a feature modifies existing code rather than adding fresh, the legacy-hardening layer runs first: impact analysis sizes the blast radius, characterization tests pin current behavior before any change, and a behavior-diff gate separates intended changes from regressions.
 
@@ -227,70 +467,25 @@ flowchart TB
   class regress warn
 ```
 
----
-
-## 7. Skill lifecycle
-
-Skills are the unit of reuse, so the factory needs a defined process for creating, validating, promoting, and retiring them — not just a static library. A skill is born hand-authored or graduated from traces, must pass its own eval set and human review, runs in shadow before going active, and is retired when it underperforms.
-
-```mermaid
-flowchart LR
-  source["Authored or graduated"] --> validate{"Eval set passes?"}
-  validate -->|no| source
-  validate -->|yes| review{"Human review · version"}
-  review --> shadow["Shadow · output compared, not shipped"]
-  shadow --> active["Active in skill library"]
-  active --> use["Loaded into harnesses"]
-  use --> measure[("Measured · evals + attributed DORA")]
-  measure -.->|repeated correction| source
-  measure -.->|underperforms| deprecate["Deprecate / retire"]
-
-  classDef path fill:#E1F5EE,stroke:#0F6E56,color:#04342C;
-  classDef gate fill:#FAEEDA,stroke:#854F0B,color:#412402;
-  classDef store fill:#EEEDFE,stroke:#534AB7,color:#26215C;
-  classDef warn fill:#FCEBEB,stroke:#A32D2D,color:#501313;
-  class source,shadow,active,use path
-  class validate,review gate
-  class measure store
-  class deprecate warn
-```
+- **Impact analysis:** the structural/dependency index computes the blast radius — every caller and dependent, with dynamic-dispatch and reflection sites flagged uncertain. It attaches to the plan so the human approves with the blast radius in view; the plan adds test targets; the risk router weights the feature up.
+- **Characterization tests:** golden-master tests pin current behavior and must pass on unchanged code first. After modification, any failure is a behavior change — intended ones update the test, unintended ones block and escalate. The compensator for legacy's weak coverage; un-characterizable code is escalated, not touched blindly.
+- **Curated canonical exemplars:** when extraction finds competing patterns above a variance threshold, a human curator blesses the canonical one; curation is versioned in the product profile.
+- **Lower starting trust ladder:** brownfield features start fully gated; collapse depends on characterization-test stability too, and high-coupling/low-coverage areas never auto-collapse.
+- **Phase 0 (env reproducibility):** per legacy repo, containerize, seed data, stub dependencies, and get CI runnable in isolation — until a repo is reproducibly runnable, CI-in-the-loop and hands-on QA can't operate, so this precedes generation.
 
 ---
 
-## 8. Eval architecture
+## 13. Worked example — Payment Methods, brief to PR
 
-Evals are the load-bearing layer of the factory: because the brain is a stochastic LLM, evals are what turn nondeterministic generation into a gated, measurable system. One governed golden set feeds an eval harness that gates every level — skill, stage, feature, and factory — and the golden set grows from every human QA finding and production failure.
-
-```mermaid
-flowchart LR
-  golden[("Golden set + acceptance criteria")] --> harness["Eval harness · deterministic + judge"]
-  harness --> skillE["Per-skill · gates promotion"]
-  harness --> stageE["Per-stage · gates the DAG"]
-  harness --> featureE["Per-feature · gates the PR"]
-  harness --> factoryE["Per-factory · DORA + trust ladder"]
-  feedback["Human QA + prod failures"] -.->|grow| golden
-
-  classDef store fill:#EEEDFE,stroke:#534AB7,color:#26215C;
-  classDef proc fill:#E1F5EE,stroke:#0F6E56,color:#04342C;
-  classDef level fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A;
-  class golden,feedback store
-  class harness proc
-  class skillE,stageE,featureE,factoryE level
-```
-
----
-
-## 9. Worked example — Payment Methods, brief to PR
-
-The case study's 3.5-day senior-engineer build, run through the factory. Each stage shows the artifact it hands the next — the typed handoffs that replace prose, which is the concrete answer to BMAD's brittle sequential handoff.
+The case study's 3.5-day senior-engineer build, run through the factory. Each stage shows the artifact it hands the next — the typed handoffs that replace prose, the concrete answer to BMAD's brittle sequential handoff.
 
 > **Runnable:** this exact flow is implemented as a working slice in [`poc/`](https://github.com/heilashahidi/athena-software-factory/tree/main/poc). `node poc/run.mjs` produces the PR below with the eval gates and CI actually executing; `--flaky migrate` and `--fail api` demonstrate retry-recovery and a compiles-but-wrong change being caught and escalated. See the [POC README](https://github.com/heilashahidi/athena-software-factory/tree/main/poc#readme).
 
-**Stage 0 — Brief.** The engineer pastes the product brief verbatim:
+**Stage 0 — Brief.** The engineer pastes the brief verbatim:
 
 > Add a "Payment Methods" management page to the merchant dashboard. Add, edit, delete, set a default. Each method has a type (credit card, ACH, wire), a label, and credentials stored via Vault. List with sorting and filtering, detail/edit form. Audit log every change. Gate behind `payment_methods:manage`.
 
-**Stage 1 — Spec compiler → formal spec.** The compiler emits the case study's typed spec and, critically, derives the `acceptance` block the tests and QA check against — intent, not entity shape:
+**Stage 1 — Spec compiler → formal spec.** Emits the typed spec and derives the `acceptance` block — intent, not entity shape:
 
 ```json
 {
@@ -313,9 +508,9 @@ The case study's 3.5-day senior-engineer build, run through the factory. Each st
 }
 ```
 
-The spec validator gates here: no acceptance criteria, no plan. **Human gate — approve spec.**
+Validator gates here: no acceptance criteria, no plan. **Human gate — approve spec.**
 
-**Stage 2 — Plan generator → DAG.** The only creative planning step; output is the case study's plan, human-approved before anything runs:
+**Stage 2 — Plan generator → DAG.** The only creative planning step; human-approved before anything runs:
 
 ```json
 {
@@ -333,7 +528,7 @@ The spec validator gates here: no acceptance criteria, no plan. **Human gate —
 
 **Human gate — approve plan.** `config` runs in parallel with the `migrate → api → frontend` chain.
 
-**Stage 3 — `migrate`.** Retrieves the Postgres exemplar for payments-dashboard. The unique-default acceptance criterion becomes a partial index, not application code:
+**Stage 3 — `migrate`.** Retrieves the Postgres exemplar; the unique-default criterion becomes a partial index, not application code:
 
 ```sql
 CREATE TYPE payment_method_type AS ENUM ('credit_card','ach','wire');
@@ -351,9 +546,9 @@ CREATE UNIQUE INDEX one_default_per_merchant
   ON payment_methods (merchant_id) WHERE is_default;
 ```
 
-Gate: migration applies and rolls back cleanly in the isolated DB; the security gate confirms no destructive operation without a guard. → green.
+Gate: applies and rolls back cleanly in the isolated DB; the security gate confirms no destructive operation without a guard → green.
 
-**Stage 4 — `api`.** Consumes the migration. Emits endpoints *and* a typed contract artifact — this is what the frontend stage receives, not a prose handoff:
+**Stage 4 — `api`.** Consumes the migration; emits endpoints *and* a typed contract artifact — what the frontend stage receives, not a prose handoff:
 
 ```yaml
 # api-contract.artifact  (handed to frontend + tests)
@@ -366,7 +561,7 @@ PaymentMethod: { id, type, label, is_default, vault_ref }     # vault_ref write-
 errors: 403 when permission absent
 ```
 
-The credential is written through the retrieved Vault-client skill; only `vault_ref` persists. Gate: typecheck, lint, permission-gate conformance against the exemplar → green.
+The credential is written through the Vault-client skill; only `vault_ref` persists. Gate: typecheck, lint, permission-gate conformance → green.
 
 **Stage 5 — `frontend`.** Consumes `api-contract.artifact`, retrieves the table-component exemplar so the list reads as native:
 
@@ -383,9 +578,9 @@ export function PaymentMethodsList() {
 }
 ```
 
-Gate: typecheck, lint, and UI verification — browser automation renders the list, asserts sort/filter and the default badge against a screenshot → green. This stage is the pass-rate bottleneck, so its gate is the strictest.
+Gate: typecheck, lint, and UI verification (browser renders the list, asserts sort/filter and the default badge against a screenshot) → green. The pass-rate bottleneck, so its gate is the strictest.
 
-**Stage 6 — `tests`.** Generated from the `acceptance` block, independent of the implementation, so they don't mirror its mistakes:
+**Stage 6 — `tests`.** Generated from the `acceptance` block, independent of the implementation:
 
 ```ts
 test("deleting the default promotes the next method by created_at", async () => {
@@ -398,18 +593,18 @@ test("non-permitted user gets 403", async () => {
 });
 ```
 
-**Stage 7 — `config` (parallel).** Registers the flag and the permission:
+**Stage 7 — `config` (parallel).** Registers the flag and permission:
 
 ```yaml
 flag: payment_methods_management        # ships dark, flipped per environment
 permission: payment_methods:manage -> roles: [merchant_admin, finance_ops]
 ```
 
-**Stage 8 — Verify gate.** The product's real CI (unit + integration) runs in the isolated environment; the security policy gate and the spec-conformance judge run alongside. All green → the PR assembles. (See §5 for what "first-run pass" precisely means when CI runs in-loop.)
+**Stage 8 — Verify gate.** Real CI (unit + integration) runs in the isolated environment; the security gate and spec-conformance judge run alongside. All green → the PR assembles. (See §6 Verification for what "first-run pass" precisely means in-loop.)
 
-**Stage 9 — QA review (human gate).** The reviewer gets the test plan, the coverage/pass report, the UI recording, and a live clickable deployment — not the diff to re-run. They confirm the five acceptance criteria by hand (delete-the-default promotion is the one worth clicking) and sign off; any case they add becomes a golden-set entry.
+**Stage 9 — QA review (human gate).** The reviewer gets the test plan, the coverage/pass report, the UI recording, and a live clickable deployment — not the diff to re-run. They confirm the five acceptance criteria by hand and sign off; any case they add becomes a golden-set entry.
 
-**Stage 10 — Risk router → PR.** Payments is a regulated, money-touching repo, so the router forces mandatory human review and runs the red-team pass first. The PR carries a generation report with provenance:
+**Stage 10 — Risk router → PR.** Payments is regulated and money-touching, so the router forces mandatory human review and runs the red-team pass first. The PR carries a provenance report:
 
 > 14 files. Matched the Vault-client pattern from `billing-service`, the table component from `merchant-dashboard/ui`, and the audit-logging mixin from `payments-core`. Unique-default enforced at the DB via partial index. Spec `pf-20260315-001`; every file links to its spec field.
 
@@ -417,271 +612,38 @@ permission: payment_methods:manage -> roles: [merchant_admin, finance_ops]
 
 ---
 
-## Component reference
-
-### 1 · Spec authoring (source of truth)
-The spec is the human's primary surface and the contract everything derives from. A brief plus a pattern template compiles into a typed spec; the validator gates it on completeness and consistency; a human approves it; the versioned spec is the audit trail everything downstream traces to.
-
-```mermaid
-flowchart TB
-  brief[/"Product brief · Linear / Jira / Notion"/] --> compiler["Spec compiler · brief to typed spec"]
-  template[("Pattern template · CRUD / Integration / ...")] --> compiler
-  compiler --> spec[/"Formal spec · fields + acceptance criteria"/]
-  spec --> split{"Oversized?"}
-  split -->|"yes"| smaller["Split into one-feature specs"]
-  smaller -.-> spec
-  split -->|"no"| validate{"Validator · complete + consistent vs codebase"}
-  intel[["Codebase intelligence"]] -.->|"structural index"| validate
-  validate -->|"incomplete / conflict"| back["Back to author"]
-  back -.-> compiler
-  validate -->|"valid"| approve{"Human gate · approve spec"}
-  approve --> versioned[("Versioned spec + audit trail")]
-  versioned --> plan[/"to Plan generator"/]
-  amend["Worker decision off-spec"] -.->|"proposed amendment"| approve
-
-  classDef stage fill:#E1F5EE,stroke:#0F6E56,color:#04342C;
-  classDef store fill:#EEEDFE,stroke:#534AB7,color:#26215C;
-  classDef io fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A;
-  classDef human fill:#FAEEDA,stroke:#854F0B,color:#412402;
-  classDef warn fill:#FCEBEB,stroke:#A32D2D,color:#501313;
-  class compiler,smaller stage
-  class template,versioned,intel store
-  class brief,spec,plan io
-  class approve human
-  class back,amend warn
-```
-
-- Spec compiler: turns a natural-language product brief into a typed, schema-validated formal spec (the case study's JSON — `product`, `pattern`, `entity`, `fields`, `permissions`, `audit`, `integrations`, `ui`).
-- Versioning: every spec is versioned; generated artifacts carry the spec id and field references for provenance.
-- Amendment rule: any worker decision not covered by the spec is surfaced as a proposed spec amendment for human approval, so the spec never drifts from what ships.
-- Owns: the audit trail. Spec + traces + generation report is the compliance record for the SOC 2 and HIPAA products.
-- Acceptance criteria, first-class field (the keystone of spec-driven development): the spec carries explicit, testable behavioral expectations, not just structural fields. This is what makes the spec-derived tests derive from intent rather than from the entity shape, and it gives change fail rate a precise per-spec definition — a failed change is one that violates the spec's acceptance criteria in production.
-- Spec validator: a linter gates compilation. An incomplete or ambiguous spec — missing acceptance criteria, underspecified fields, no permission gate where the pattern requires one — cannot become a plan. No code is generated without a complete spec.
-- Consistency gate (same validator, against the existing system): the validator also lints the spec against codebase intelligence's structural index, so a spec that conflicts with what already exists — an entity or table that already exists, a permission already defined, a feature already shipped — is caught at spec time, before a plan or any code. This is the cheap, upstream half of brownfield impact analysis (which runs at plan time); it is one more check in the existing validator, not a new subsystem.
-- Spec templates per pattern: each pattern (CRUD, Integration, Workflow, Analytics) has a template the brief fills in — the spec-side analog of skills, so authoring is fast and every spec of a pattern carries the same required fields and acceptance shape.
-- Bidirectional traceability: every generated file maps back to a spec field and every eval maps to an acceptance criterion, so the eval gate literally checks output against the spec and the generation report can show which part of the spec produced what.
-- Batch discipline: one spec is one feature is one deployable PR. The compiler splits an oversized spec into smaller specs — this is where DORA's batch-size discipline (deployment frequency) is enforced, upstream of any code.
-
-For example, the Payment Methods spec gains an `acceptance` block alongside its fields — default is unique per merchant, deleting the default promotes the next method, every change writes an audit entry, non-permitted users get a 403 — and those criteria, not the implementation, are what the spec-derived tests and the QA reviewer check against.
-
-### 2 · Codebase intelligence (one system, seven repos)
-Learns each product's conventions well enough that output reads as native. One indexer feeds four stores, a hybrid retrieval serves them as context to the spine, and two loops keep it fresh — re-index on merge, and exemplars graduated by the learning loop.
-
-```mermaid
-flowchart TB
-  repos[/"Seven repos · three languages"/] --> indexer["Indexer · language parsers feed one unified schema"]
-  indexer --> struct[("Structural index · symbol + dependency graph")]
-  indexer --> exemplar[("Exemplar store · canonical pattern per repo + engine")]
-  indexer --> facts[("Architectural facts · Vault, permissions, audit, tables")]
-  indexer --> profile[("Product profiles · stable conventions, per-product prompt")]
-
-  struct --> retrieval{{"Retrieval · hybrid: semantic + graph + exemplar"}}
-  exemplar --> retrieval
-  facts --> retrieval
-  profile --> retrieval
-  retrieval -->|context| consumers[/"Spec validator · Plan generator · Workers"/]
-
-  merge["Merge to a repo"] -.->|"re-index hook"| indexer
-  learn[["Learning loop"]] -.->|exemplars| exemplar
-  cold{"Cold start · validate conventions once"} -.-> profile
-
-  classDef proc fill:#E1F5EE,stroke:#0F6E56,color:#04342C;
-  classDef store fill:#EEEDFE,stroke:#534AB7,color:#26215C;
-  classDef io fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A;
-  classDef human fill:#FAEEDA,stroke:#854F0B,color:#412402;
-  class indexer,retrieval proc
-  class struct,exemplar,facts,profile store
-  class repos,consumers,merge io
-  class learn store
-  class cold human
-```
-
-- Indexer: language-specific parsers feed a single unified schema, so seven repos in three languages are one system, not seven.
-- Structural index: symbol and dependency graph — answers "where does auth get checked," not just text similarity.
-- Exemplar store: the canonical implementation of each pattern in each repo, keyed by language and database engine — the four engines (Postgres, MongoDB, DynamoDB, Redis) diverge most at the migration and persistence layer, so there is no single migration skill but one per engine, each retrieved against the target product. This is what makes generated code look like a teammate wrote it.
-- Architectural facts: how this product does Vault, permissions, audit logging, table components, staging config.
-- Product profiles: stable, product-wide conventions baked into a per-product system prompt; volatile feature context is retrieved at generation time.
-- Retrieval: hybrid — semantic + structural graph + exemplar lookup.
-- Cold start: index a new repo, generate a conventions report, validate once with an engineer.
-- Freshness: re-index on merge via a CI hook. A stale index is the most likely silent cause of falling below the pass-rate bar.
-
-### 3 · Orchestration
-Deterministic conductor over an explicit plan — traceable where a multi-agent swarm is not.
-- Plan generator: compiles the spec into a typed task DAG (the only creative planning step; its output is structured and human-approved).
-- Conductor: deterministic DAG executor. Walks dependencies, dispatches stages, enforces typed artifact handoff, routes failures. It is code, not a model.
-- Typed artifacts between stages: the frontend stage receives the API contract artifact, not a prose handoff — the fix for sequential-handoff brittleness.
-- Isolated env provisioner: a reproducible, isolated environment per run (VM or worktree plus isolated database, cache, and state) so CI can run in the loop and parallel runs never collide.
-- Failure recovery: per-stage bounded retries, then human escalation, with per-stage checkpointing so a single stage can be re-run in isolation.
-- Cross-run scoping: the conductor knows which paths each run will touch (from the plan and, for brownfield, the impact analysis) and serializes or merge-queues runs whose write sets overlap, so two concurrent features never land conflicting diffs on the same files — environment isolation prevents state collision, this prevents source collision.
-
-### 4 · Harnessed workers
-Same model, different jacket. Skills are the unit of reuse.
-- Worker: one invocation of the shared LLM with a stage-specific harness of context, memory, tools, and skills.
-- Skill library: packaged, versioned, testable units of recurring work — instructions, reference exemplars, helper tools, and each skill's own eval. Pattern skills (CRUD anatomy) plus product-convention skills (Vault field, permission gate, table component, audit logging).
-- Shared infrastructure: skills, harnesses, exemplars, and the eval suite are versioned and reviewed like code, owned centrally, with product profiles layered on top — not private per-engineer factories.
-- Scaling: a new pattern means authoring its skills; a new product means reusing pattern skills plus authoring convention skills. Never rebuilding the system.
-
-### Skill development lifecycle
-Because skills are the unit of reuse, the factory treats skill creation as a defined workflow, not a one-time authoring task.
-- Origin: a skill is born one of two ways — hand-authored by an engineer for a known recurring task, or graduated by the factory when the emergent-rules engine sees the same correction recur in traces above a threshold and drafts a candidate skill or skill update.
-- Anatomy: every skill packages instructions, reference exemplars, the helper tools it needs, and its own eval set. A skill without an eval cannot enter the library.
-- Validation gate: a candidate must pass its eval set against the golden cases before promotion — it produces correct, conformant output on known inputs. This is what makes skills trustworthy rather than merely reusable.
-- Review and versioning: skills are reviewed like code by the central owners and versioned. Product profiles pin a known-good version, so one product can stay on a stable skill while others adopt a newer one.
-- Promotion stages: candidate → shadow → active. In shadow the skill runs alongside the current one and its output is compared but not shipped, so a new or updated skill earns trust on real work before it gates anything.
-- Regression safety: changing a skill, or swapping the underlying model, re-runs the skill's eval set; no version ships if its scores drop. This is what keeps the self-improving loop from silently degrading.
-- Measurement and retirement: each skill carries its leading eval scores plus the attributed lagging outcomes — the lead time and change fail rate of features that used it. A skill that consistently underperforms is flagged and retired.
-- Ownership: the skill library is shared, central infrastructure, never private per-engineer copies — the same anti-fragmentation rule as the rest of the factory.
-
-### Context connectors (enablers)
-Primitives make the codebase legible and guardrails constrain risk; enablers give workers reach into the systems where the other 78% of the work already lives. Without these the factory starts only after a brief exists and stops at the PR — leaving the requirements and production ends of the lifecycle, the largest slices of Exhibit A, untouched.
-- Inbound, into the spec compiler: connectors to Linear / Jira and Notion so a product brief is pulled from where PMs actually write it, with the originating ticket linked into the spec for traceability. This is how the factory reaches up into Requirements & Design (18%), not just Writing Code (22%).
-- Outbound, into the flywheel: connectors to Datadog / the incident tool and to GitHub so production incidents and merged-PR review comments — the highest-signal human review data — flow back as eval and memory inputs (see §7).
-- Scoped like tools: each connector is a tool a harness can be granted or denied per stage and per product. Regulated repos get a tighter connector set; secrets and PHI never transit a connector into context or traces.
-- MCP as the substrate: connectors are MCP servers, so adding a new source (Slack, PagerDuty, the internal `athena-cli`) is configuration, not a new subsystem — the same one-system-not-seven discipline applied to integrations.
-
-### 5 · Verification (CI in the loop)
-Verification is woven in per-stage, with the product's real CI as the source of truth. It is a defense-in-depth stack — cheap deterministic checks first, then conformance and a non-skippable security floor, then spec-derived tests and real CI, then a risk-weighted human QA gate on top.
-
-```mermaid
-flowchart TB
-  artifact[/"Stage artifact"/] --> checks["Per-stage checks · compile · lint · typecheck"]
-  checks --> conform["Pattern conformance · LLM judge + static vs exemplar"]
-  conform --> sec["Security policy gate · deterministic floor: SAST, migration linter, OPA"]
-  sec --> ui["UI verification · browser + screenshot, frontend stage"]
-  ui --> tests["Spec-derived tests · from acceptance, not implementation"]
-  tests --> ci{"Real CI in loop · green?"}
-  ci -->|"fail"| retry["Bounded retry, then escalate to human"]
-  retry -.-> artifact
-  ci -->|"pass"| qa{"Human QA · risk-weighted, live env"}
-  qa -->|"sign off"| pr[/"to Review / PR"/]
-  qa -->|"add cases / reject"| tests
-  qa -.->|"findings"| learn[["Learning loop · golden set + rules"]]
-
-  classDef stage fill:#E1F5EE,stroke:#0F6E56,color:#04342C;
-  classDef store fill:#EEEDFE,stroke:#534AB7,color:#26215C;
-  classDef io fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A;
-  classDef human fill:#FAEEDA,stroke:#854F0B,color:#412402;
-  classDef warn fill:#FCEBEB,stroke:#A32D2D,color:#501313;
-  class checks,conform,sec,ui,tests stage
-  class artifact,pr io
-  class qa human
-  class retry warn
-  class learn store
-```
-
-- Per-stage checks: compile, lint, typecheck — a stage does not complete until its output is syntactically valid and type-safe.
-- Pattern conformance: an LLM judge plus static checks against the retrieved exemplar.
-- Security policy gate: a deterministic, non-skippable floor for the regulated repos — it is policy code, not the LLM judge. Concretely: SAST/semgrep rules that assert a permission check on every endpoint; a migration linter that blocks `DROP` and destructive `ALTER` without a reviewed guard and requires a reversible down-migration; an OPA-style policy engine over the diff. The LLM judge is a second layer on top of this floor, never a substitute for it. Semantic cases the floor cannot decide — a permission check present but on the wrong resource — are caught by a spec-derived test ("a user cannot reach another merchant's records") plus mandatory human review on regulated output. Defense in depth; the bottom layer is deterministic.
-- UI verification: browser automation and screenshot or state inspection for the frontend stage, which is the pass-rate bottleneck because UI is harder to verify than backend.
-- Real CI: the existing pipeline (unit, integration) run before a PR is emitted. Because CI runs in the loop, "passes CI on first run" needs a precise definition: a PR the factory emits has already gone green in-loop, so the operative v1 metric is the percentage of features that reach green within the bounded retry budget without human escalation — and, as an independent check, the pass rate of the human's first CI run on the emitted PR, which should sit near 100% and where any miss is an environment-parity bug between the in-loop CI and the product's CI. The 80% bar is measured on the former, and a parity check samples emitted PRs against the product's own CI to alarm on any drift between in-loop and production CI. This is the single biggest lever on the pass target.
-- Spec-derived tests: tests are generated from the spec independently of the implementation, so they do not just mirror the code's mistakes.
-- Human QA review (in the loop): after the automated checks pass, a risk-weighted human gate. The reviewer reviews artifacts rather than re-running work — the spec-derived test plan, the coverage and pass/fail report, and the UI screenshots or recordings — and does targeted exploratory and acceptance testing against a live, clickable deployment of the feature in the isolated run environment. Low-risk CRUD on a non-regulated product can be a lightweight report sign-off; regulated or high-blast-radius features get mandatory hands-on testing.
-- QA is distinct from code review: QA asks "does it behave correctly," the risk router asks "is the implementation and architecture right." The QA reviewer can sign off, add test cases, or reject and send the feature back to the tests worker to regenerate.
-- QA feeds the flywheel: cases a reviewer adds and behaviors they flag become golden eval set entries and emergent rules, making human QA the highest-signal input to factory improvement. As the eval suite proves out, the gate collapses to risk-weighted sign-off the same way code review does.
-
-### 6 · Human interface and output
-Progressive disclosure with intervention at every stage and a trust ladder that tightens over time. The risk router routes the assembled change by blast radius; high-risk output gets a red-team pass and mandatory human review; the emitted PR carries provenance so the human can meaningfully certify it.
-
-```mermaid
-flowchart TB
-  assembled[/"Assembled change + generation report"/] --> router{"Risk router · by blast radius"}
-  router -->|"low-risk CRUD"| light["Light review · clean diff + provenance"]
-  router -->|"auth / payments / migrations / regulated"| redteam["Red-team agent · adversarial pass"]
-  redteam --> mandatory["Mandatory human review"]
-  light --> human{"Human gate · approve / correct / re-run"}
-  mandatory --> human
-  human -->|"approve"| pr[/"Reviewable PR"/]
-  human -.->|"re-run"| factory["Back through factory"]
-  cfr[("Change-fail-rate")] -.->|"earns gate collapse"| router
-  coherence["Standing coherence pass"] -.->|"refactor specs"| factory
-
-  classDef stage fill:#E1F5EE,stroke:#0F6E56,color:#04342C;
-  classDef store fill:#EEEDFE,stroke:#534AB7,color:#26215C;
-  classDef io fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A;
-  classDef human fill:#FAEEDA,stroke:#854F0B,color:#412402;
-  classDef warn fill:#FCEBEB,stroke:#A32D2D,color:#501313;
-  class light,factory,coherence stage
-  class redteam warn
-  class mandatory,human human
-  class assembled,pr io
-  class cfr store
-```
-
-- Risk router (agentic code owner): low-risk diffs get light review; anything touching auth, payments, migrations, or a regulated repo gets mandatory human review.
-- Red-team agent: an adversarial pass before a human engages, for high-risk and regulated output.
-- Review interface: clean diffs, clear commit messages, and a generation report with provenance — "matched the Vault client pattern from billing-service." Provenance is what converts a black box into something a senior engineer trusts.
-- Trust ladder: v1 gates at every stage; as the dashboard proves the pass rate, gates collapse toward plan-approval plus final-PR review.
-- Accountability: a human gate is accountability only if the human can meaningfully review, which is why the interface is built for reviewability — clean diffs, provenance, and a QA reviewer who certifies behavior against the spec's acceptance criteria on a live environment, the same basis a senior signs off a junior's PR. The approving engineer is accountable for the change; the named platform team owns the machinery, exactly as for any internal CI/CD that can ship a bad deploy. The factory does not move liability onto the model — it shifts what the human certifies from authorship to behavior. For regulated repos the gate keeps a permanent floor and never fully collapses.
-- Architectural coherence (human-owned): per-feature batch discipline optimizes each PR in isolation, which over many runs risks local-optimum drift — agents optimize task completion, not long-term design. The risk router reviews one PR's architecture; a standing coherence pass reviews the portfolio's. A scheduled agent diffs accumulated factory output against the architectural facts and exemplars, flags divergence and duplication for a human architect, and proposes refactor specs that run back through the factory. Architecture quality stays a human responsibility; the factory's job is to surface drift early, not to own the call.
-
-### 7 · Observability and learning
-The flywheel that turns a static pipeline into a self-improving one.
-- Trace store: structured spans (OpenTelemetry style) on every tool call, viewable at worker, supervisor, and manager levels. Spans also decompose delivery lead time per stage, so the factory continuously and automatically reproduces the case study's two-sprint time study (Exhibit A) and shows which skill or stage owns the cycle time.
-- Eval suite: a curated golden set (known-good specs paired with known-good PRs) plus traces harvested from real runs. Deterministic checks for hard criteria; LLM judge for conformance.
-- Eval dashboard: surfaces both the leading indicators and the DORA outcomes below, trended over time and per product or pattern. This is how you know whether you are at the target and what is dragging it.
-- Emergent rules engine: repeated failures become guardrails; a recurring correction graduates into a skill. Sits on top of the hardcoded safety floor.
-- Memory and taste store: accepted diffs, transcripts, screenshots, design-system references, and human review decisions — sharpens the exemplars retrieval serves.
-- Production signals: each deployed change emits the DORA outcomes back into the eval suite and memory. A change that fails in production is the highest-signal eval data the factory gets, so it becomes a golden-set entry and an emergent rule — this is the loop closing past the PR all the way to production reality.
-- Lifecycle automations: the factory closes its own loops, not just the generation one. The flagship case is stale feature-flag cleanup — the config worker creates a flag on every feature, and once a flag is fully rolled out a fast-lane removal spec runs through the same machinery to delete it and its now-dead branches. This is the template for automating any repetitive human-in-the-loop chore the traces surface (dependency bumps, config drift, log triage): inspect the recurring manual action, then point the factory at it. Flag cleanup is itself part of the 78% the factory exists to reclaim.
-
-### Eval architecture
-Evals are the load-bearing layer. Because the brain is a stochastic LLM, evals are what convert nondeterministic generation into a gated, measurable, improvable system — nothing advances without passing one, and each harness carries its stage's eval as its definition of done, the fourth element alongside context, memory, and tools.
-- Four levels, each a gate: per-skill (gates whether a skill enters or stays in the library), per-stage (the gate between DAG stages — an artifact does not feed dependents until it passes), per-feature (the verify gate: the product's real CI plus spec-conformance, gating PR emission — the 80% bar), and per-factory (the aggregate dashboard and DORA outcomes, gating trust-ladder collapse).
-- Two methods: deterministic checks for hard criteria (compile, lint, types, CI pass, security policy, characterization pass/fail) and an LLM judge for fuzzy criteria (pattern conformance, acceptance-criteria satisfaction, "would a senior engineer say a teammate wrote this").
-- Ground truth, the golden set: a curated, versioned set of specs paired with known-good PRs, plus the acceptance criteria carried in each spec. It is the definition of correct the whole factory is measured against, and it is shared central infrastructure like skills.
-- Growing it: every human QA finding, every flagged behavior, and every production failure becomes a golden-set entry — the factory's definition of correct sharpens exactly where it has been wrong before. This is the flywheel expressed as evals.
-- Trusting the judge: the LLM judge is itself eval'd, its verdicts calibrated against human review decisions on a held-out set and re-checked when the model changes, so a drifting judge cannot silently corrupt the gates.
-- Eval-driven: the eval is written with the spec's acceptance criteria and with each skill, before generation — the factory knows what correct means before it builds, the way test-driven development front-loads the test.
-- Eval harness: a shared component that runs evals consistently across all four levels, stores results, and feeds the dashboard; versioned like skills.
+## Reference
 
 ### Performance metrics — leading indicators and DORA outcomes
 
-DORA — DevOps Research and Assessment — is a multi-year research program (popularized in the book *Accelerate*) that identified four metrics which reliably distinguish high-performing software-delivery organizations. The four split into two pairs: throughput (delivery lead time, deployment frequency) and stability (mean time to restore, change fail rate). Its central finding is that high performers score well on both at once — speed and stability are not a tradeoff — and that these are deliberately delivery-*system* outcomes, never individual-output measures.
+DORA (DevOps Research and Assessment, popularized in *Accelerate*) identified four metrics that distinguish high-performing delivery orgs, in two pairs: throughput (delivery lead time, deployment frequency) and stability (mean time to restore, change fail rate). High performers score well on both at once, and these are delivery-*system* outcomes, never individual measures.
 
-What DORA is doing in this architecture: it is the factory's north-star and its definition of success. The case study's whole problem is a DORA measurement in disguise — cycle time stuck at +11% is a delivery-lead-time result — so DORA is the scoreboard the factory is built to move. Concretely it plays four roles:
-- Defines success: the throughput pair tells you whether the factory delivered the productivity gain it promises (attacking the 78% non-coding time); the stability pair keeps it honest, so it cannot win by shipping fast-but-broken.
-- Bridges internal to business: the per-skill leading indicators below exist to predict the DORA outcomes, which are the ground truth the leading indicators are validated against.
-- Closes the loop to production: in the flywheel, deployed changes emit DORA signals back into the evals and memory — a failed change in production is the highest-signal training data the factory gets.
-- Governs autonomy: change fail rate, a DORA stability metric, gates how far the trust ladder is allowed to collapse. The factory earns less supervision by proving low failure in production, not by looking good in the pipeline.
+DORA is the factory's north star — the case study's stuck +11% cycle time is a delivery-lead-time result, so DORA is the scoreboard the factory is built to move. It defines success (throughput proves the productivity gain, stability keeps it honest), bridges internal to business (leading indicators predict DORA), closes the loop (deployed changes emit DORA back), and governs autonomy (change fail rate gates how far the trust ladder collapses).
 
-Measure at two levels, and do not confuse them.
-- Leading indicators (fast, internal, per skill / harness / stage): first-run CI pass rate, human-cleanup time (gated at the PRD's ≤30-minute cleanup line), pattern conformance, characterization-test stability, per-skill eval scores. These are diagnostic and fixable — they tell you which skill or harness to improve, the way you would assess an intern. Since every agent is the same brain, all meaningful variation lives here, not in "which agent."
-- Lagging outcomes — the DORA four, measured at the delivery-system and per-product level, never per agent. These are what the CTO actually judges the factory on, and the leading indicators exist to predict them.
+Measure at two levels, and don't confuse them:
+- **Leading (fast, internal, per skill/stage):** first-run CI pass rate, human-cleanup time (the PRD's ≤30-minute line), pattern conformance, characterization stability, per-skill eval scores. Diagnostic and fixable — they tell you which skill to improve. Since every agent is the same brain, all variation lives here.
+- **Lagging — the DORA four,** at the delivery-system and per-product level, never per agent. What the CTO actually judges the factory on.
 
 The four, mapped to the factory:
-- Delivery lead time: approved spec to deployable PR, and on to production. The factory's headline target — the 78% non-coding time and the case study's stuck 11% cycle-time number. Split the variable design portion (spec authoring) from the deliver portion (generation to PR), which should be predictable.
-- Deployment frequency: a proxy for batch size. One spec is one small batch, so the factory naturally pushes frequency up; measured per product or squad.
-- Mean time to restore: when a factory change causes an incident, how fast service is restored. The deterministic restore path is the feature-flag kill switch and a revert — never asking the stochastic generator to fix the thing it just broke; provenance and the audit trail speed diagnosis. A generated fix, when used, goes through the same or stricter gates, only prioritized.
-- Change fail rate: the percentage of factory changes that degrade production or need a hotfix or rollback. This is the true correctness metric and is distinct from first-run CI pass rate — code can pass CI and still fail in production. Change fail rate, not CI pass rate, is what should gate trust-ladder collapse and risk routing.
+- **Delivery lead time:** approved spec → deployable PR → production. The headline target. The conductor parallelizes independent stages and per-stage spans attribute cycle time to the slowest stage. Split variable design (spec authoring) from predictable delivery (generation to PR).
+- **Deployment frequency:** a batch-size proxy; one spec is one small batch, pushing frequency up. Enforced upstream by the compiler's batch discipline and downstream by feature flags that ship dark.
+- **Mean time to restore:** the deterministic restore path is the feature-flag kill switch plus revert — never asking the generator to fix what it broke; provenance and the audit trail speed diagnosis. A generated fix runs a prioritized lane through the *same* gates, never a gate-skipping one.
+- **Change fail rate:** % of factory changes that degrade production or need a rollback. The true correctness metric, distinct from CI pass rate — code can pass CI and still fail in production. This, not CI pass rate, gates trust-ladder collapse and weights the risk router; a canary watches a traffic slice and auto-rolls-back on a spike; each failure is attributed to the producing skill.
 
-Two principles from the source, used as anti-gaming guardrails:
-- Global outcome, not local: measure the product and the factory as a whole; never pit squads or agents against each other.
-- Outcomes, not output: do not optimize the factory for pull-request volume. Reward shorter lead time and lower change fail rate, or the factory games the metric by shipping more, smaller, riskier changes.
+Anti-gaming guardrails from the source: **global outcome, not local** (never pit squads or agents against each other); **outcomes, not output** (don't optimize for PR volume, or the factory ships more, smaller, riskier changes).
 
-Where each metric is wired in, beyond the dashboard:
-- Delivery lead time: the conductor schedules to shorten the critical path (independent stages run in parallel), and per-stage spans attribute cycle time to the responsible skill — optimization targets the actually-slowest stage instead of guesswork.
-- Deployment frequency: enforced upstream in the spec compiler's batch discipline (one spec, one deployable PR) and downstream by the config worker's feature flags, which let a change ship dark and flip on independently.
-- Mean time to restore: the primary restore lever is the feature flag — an instant, deterministic kill switch — backed by revert; provenance and characterization tests speed diagnosis. A generated fix runs a prioritized lane through the *same* gates, never a gate-skipping one, and if the factory caused the incident the response is rollback, not self-repair. Putting a stochastic generator on a gate-skipped critical path is explicitly disallowed.
-- Change fail rate: gates trust-ladder collapse and weights the risk router; a canary or progressive rollout watches the production signals on a slice of traffic and auto-rolls-back on a spike; and each failure is attributed to the skill or stage that produced it, so the fix targets that skill.
-
-Sequencing: first-run CI pass rate is the v1 acceptance gate and a fast per-skill diagnostic; change fail rate is the lagging outcome the factory's success and autonomy are ultimately judged against. They are not interchangeable, and trust-ladder collapse is earned against the production metric, not the pipeline one. Attribution is handled honestly: portfolio DORA is confounded by everything else shipping, so v1 is *proven* on the directly-attributable leading indicators (first-run yield, ≤30-minute cleanup, pattern conformance) and on a matched cohort — factory-built versus hand-built CRUD on the same product and sprint, against a pilot-product baseline hold. DORA is the program's north star, not the v1 scoreboard; it governs trust-ladder collapse only once the cohort and production signal accumulate.
+Sequencing & attribution: first-run CI pass rate is the v1 gate and a per-skill diagnostic; change fail rate is the lagging outcome autonomy is judged against. Portfolio DORA is confounded by everything else shipping, so v1 is proven on directly-attributable leading indicators plus a matched cohort — factory- vs hand-built CRUD, same product and sprint, against a pilot-product baseline hold. DORA is the program's north star, not the v1 scoreboard.
 
 ### Cost and ROI
-The unit economics, stated rather than assumed. A CRUD feature is ~3.5 senior-engineer-days, roughly $3–4K loaded. The factory's token spend per feature — generation, bounded retries, and the eval and judge passes — is tens of dollars, two orders of magnitude below the labor it displaces, so tokens are not the constraint; the costs that matter are the human's spec-and-review time and the platform's amortized build (3 engineers × 60 days, ~$150–200K). That frames the real lever: ROI is dominated by how much human review time the trust ladder removes, not by inference cost. Break-even is the platform build divided by labor saved per feature times CRUD volume — at 38% of features across a 23-deploy/day portfolio, payback is in months. The stability metrics keep this honest: change fail rate gates trust-ladder collapse, so the factory cannot book ROI by shipping fast-but-broken.
 
-### Cross-cutting — security and compliance
-- Secrets and PHI never enter context, traces, or memory — enforced, not assumed: a secrets scanner (gitleaks-style) and a PHI classifier run at every ingestion boundary (indexer, trace store, memory store) and redact before anything persists. The factory handles Vault references only. Test fixtures and seed data that embed real secrets are the live risk, so the scrub runs on ingest, upstream of any worker seeing the content.
-- Input integrity (prompt-injection boundary): retrieved exemplars and inbound briefs are data, not instructions — delimited as untrusted context a worker reads, never executed as commands. The spec compiler validates every brief into the typed schema, so free text cannot become an instruction: it has to fit a field, which makes the schema the injection firewall. Indexed content enters only through the re-index-on-merge hook, so a crafted comment must clear human PR review before any worker can retrieve it.
-- Stricter harness variant for regulated products: tighter tool scope, mandatory security stage, no learned-memory persistence from those repos.
-- Auditability maps to named controls, not just observability: every change traces to an approved spec and a named approver, and because the spec author is not the approver, that is segregation of duties. This satisfies SOC 2 CC8.1 (change management) and HIPAA §164.312(b) (audit controls) on an append-only, retained, tamper-evident trace store. The generation report plus the trace is the change record — automatically complete in a way manual change management is not, and reproducible because the conductor is deterministic where a swarm is not.
+A CRUD feature is ~3.5 senior-engineer-days, roughly $3–4K loaded. The factory's token spend per feature — generation, bounded retries, eval and judge passes — is tens of dollars, two orders of magnitude below the labor it displaces, so tokens are not the constraint. The costs that matter are the human's spec-and-review time and the platform's amortized build (3 engineers × 60 days, ~$150–200K). ROI is dominated by how much review time the trust ladder removes, not inference cost. Break-even is the build cost over labor saved per feature times CRUD volume — at 38% of features across a 23-deploy/day portfolio, payback is in months. Change fail rate gating trust-ladder collapse keeps this honest: the factory can't book ROI by shipping fast-but-broken.
 
-### Legacy hardening (brownfield)
-The base architecture suits clean brownfield. For a gnarly legacy codebase, add this layer — it is what makes the factory safe to point at tangled, under-tested, inconsistent code.
-- Impact analysis: before planning a change that touches existing code, the structural and dependency index computes the blast radius — every caller and dependent of the affected paths, with dynamic-dispatch and reflection sites flagged as uncertain. The impact report attaches to the plan, so the human approves with the blast radius in view, the plan generator adds test targets for affected paths, and the risk router weights the feature up.
-- Characterization tests: before a worker modifies existing behavior, generate golden-master tests that pin the current observable behavior of the affected paths and confirm they pass on the unchanged code — a characterization test that fails on current code is worthless. After modification, re-run them: any failure is a behavior change, cross-checked against the spec. Intended changes update the test; unintended ones are regressions that block and escalate. This is the compensator for the weak test coverage legacy codebases usually have, and it is what lets the factory change tangled code safely rather than only add fresh code. Code that cannot be characterized — nondeterministic or untestable — is escalated, not touched blindly.
-- Curated canonical exemplars: when exemplar extraction finds competing patterns for the same task above a variance threshold, the conventions report surfaces them as competing conventions and a human curator blesses the canonical one or marks it context-dependent. Curation is versioned in the product profile, so the factory conforms to one chosen style instead of averaging five inconsistent ones into a sixth.
-- Lower starting trust ladder: brownfield-surgery features start with all gates mandatory — plan, QA, and code review. Gate collapse depends not only on pass rate but on characterization-test stability; high-coupling or low-coverage areas never auto-collapse.
-- Phase 0, environment reproducibility: per legacy repo, a prerequisite onboarding project to containerize, seed data, stub external dependencies, and get the product's CI runnable in an isolated environment. Until a repo is reproducibly runnable, CI-in-the-loop and hands-on QA cannot operate, so this precedes any generation for that repo — the runnable, accessible, verifiable test.
+### Security and compliance
+
+- **Secrets and PHI never persist:** a secrets scanner (gitleaks-style) and a PHI classifier run at every ingestion boundary (indexer, trace store, memory) and redact before anything persists; the factory handles Vault references only. Test fixtures with real secrets are the live risk, so the scrub runs on ingest, upstream of any worker.
+- **Prompt-injection boundary:** retrieved exemplars and inbound briefs are data, not instructions — delimited as untrusted context, never executed. The compiler validates every brief into the typed schema, so free text must fit a field — the schema is the injection firewall. Indexed content enters only via the re-index-on-merge hook, so a crafted comment must clear human PR review first.
+- **Stricter regulated harness:** tighter tool scope, mandatory security stage, no learned-memory persistence from those repos.
+- **Auditability maps to named controls:** every change traces to an approved spec and a named approver; spec author ≠ approver is segregation of duties. Satisfies SOC 2 CC8.1 (change management) and HIPAA §164.312(b) (audit controls) on an append-only, tamper-evident trace store. The generation report plus the trace is the change record — automatically complete and reproducible because the conductor is deterministic.
 
 ---
 
@@ -712,4 +674,4 @@ Defer to later phases:
 
 Every node in the master diagram has a slot for these without redrawing the architecture.
 
-If the pilot products are genuinely legacy rather than clean brownfield, Phase 0 — making each repo reproducibly runnable — precedes generation, and impact analysis, characterization tests, and curated exemplars join from day one with the trust ladder starting fully gated. Budget for Phase 0 explicitly: standing up a stubborn legacy environment can eat as much of the 60 days as building the factory itself, so it may be wiser to pick the two most tractable repos for v1 and defer the gnarliest one until the hardening layer is proven. Concretely: weeks 1–2 are a Phase-0 spike on both pilot repos with a hard go/no-go — a repo that cannot be made reproducibly runnable in two weeks is swapped or v1 drops to one product, and v1 success is defined on whatever clears the gate. Choosing the tractable repos first is deliberate risk management; the regulated, high-blast-radius repo is Phase 2, after the hardening layer has earned trust.
+If the pilot products are genuinely legacy rather than clean brownfield, Phase 0 — making each repo reproducibly runnable — precedes generation, and impact analysis, characterization tests, and curated exemplars join from day one with the trust ladder starting fully gated. Budget for Phase 0 explicitly: standing up a stubborn legacy environment can eat as much of the 60 days as building the factory itself, so pick the two most tractable repos for v1 and defer the gnarliest. Concretely: weeks 1–2 are a Phase-0 spike on both pilot repos with a hard go/no-go — a repo that can't be made reproducibly runnable in two weeks is swapped or v1 drops to one product, and v1 success is defined on whatever clears the gate. The regulated, high-blast-radius repo is Phase 2, after the hardening layer has earned trust.
