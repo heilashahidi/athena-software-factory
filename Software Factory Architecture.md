@@ -8,7 +8,7 @@ Each `mermaid` block below is independent and can be pasted into any mermaid ren
 
 ## 1. Master system architecture
 
-A subsystem-level overview: the spec-to-PR spine (solid) with codebase intelligence feeding context into it and the learning loop feeding improvements back (dotted). Component-level detail for each subsystem lives in sections 2–5 and the component reference.
+A subsystem-level overview: the spec-to-PR spine (solid) with codebase intelligence feeding context into it and the learning loop feeding improvements back (dotted). Every node here expands into its own diagram — orchestration as the generation DAG (§2), the harnessed worker (§3), the learning loop as the flywheel (§4), and the eval layer of verification (§8); spec authoring, codebase intelligence, the full verification stack, and the review interface each get a diagram in the component reference below.
 
 Where this sits on the autonomy ladder: Athena today is at rung two — 94% tool adoption is pair-programming, which is exactly why cycle time is stuck at +11%. The factory moves the CRUD pattern to rung five, where agents plan, build, verify, and assemble while humans stay on the gates. The trust ladder throughout this document is that climb made incremental: a gate collapses only when a production metric earns it, never on a schedule.
 
