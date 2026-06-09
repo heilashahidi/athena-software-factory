@@ -48,7 +48,10 @@ The conductor compiles the spec into this dependency graph and walks it. Stage t
 
 ```mermaid
 flowchart TB
-  spec[/"Feature spec"/] --> plangen["Plan generator"]
+  spec[/"Feature spec"/] --> validate{"Spec validator · complete + consistent vs existing system"}
+  validate -->|"conflict / incomplete"| amend["Back to spec author"]
+  amend -.-> spec
+  validate -->|valid| plangen["Plan generator"]
   plangen --> approve{"Approve plan; gate before migrate"}
   approve --> migrate["migrate · db_migration · no deps"]
   migrate --> api["api · rest_endpoints · needs migrate"]
