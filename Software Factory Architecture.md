@@ -14,18 +14,31 @@ The spec-to-PR spine (solid), with codebase intelligence feeding context in and 
 
 **Build, don't buy or wait:** the model is a commodity by design, so the durable asset is the layer a vendor cannot own — the seven-repo convention and exemplar index (an *exemplar* is the canonical existing implementation of a pattern in a given repo — the reference new code is matched to, so output reads as native), the golden set grown from Athena's own production failures, and the eval harness encoding what "correct at Athena" means. Vendors optimize the 22% (writing code); this targets the 78% (conventions, gates, compliance). Reversible: if a vendor ships orchestration, the specs, skills, and evals port onto it.
 
+**Risk router:** sits between the spec and orchestration. Reads the spec and assigns a risk tier based on what the change touches — auth, payments, PHI, schema migrations, public API surface — then routes to the appropriate harness. Low-risk CRUD gets a fast lane (fewer gates, auto-approve eligible); high-risk changes get a hardened harness with tighter tool scope, the security worker, and mandatory human gates. This is what lets the trust ladder collapse *selectively*: autonomy expands for low-risk work without ever removing safeguards from high-risk work.
+
+**Same model, different harness:** every worker is the same underlying LLM — the model is a swappable commodity. What differentiates workers is the harness: the context, tools, skills, memory, and success criterion each is given. Four harness types earn their existence by having genuinely distinct postures:
+
+- **Build harness** — constructs artifacts; success = output passes spec and eval.
+- **Security worker** — adversarial posture, read-only tools; success = finding vulnerabilities in what the build workers produced, not validating that things work. Runs independently of the build workers so it has no bias toward approving its own output. Context: OWASP top 10, Athena's compliance controls (HIPAA/SOC 2), known attack patterns as exemplars.
+- **Migration harness** — database changes are irreversible in production; this harness adds rollback planning, zero-downtime strategy checks, and a backward-compatibility gate that the standard build harness omits. One per DB engine (Postgres, MongoDB, DynamoDB, Redis) because migration semantics diverge at the engine level.
+- **Performance harness** — adversarial to latency on data-heavy paths; success = finding N+1 queries, missing indexes, and expensive operations before they ship. Context: existing query plans, performance baselines, known slow patterns per product.
+
 ```mermaid
 flowchart LR
   spec(["Spec"])
+  router{"Risk router"}
   plan["Orchestration"]
   build["Workers"]
   verify["Verification"]
+  sec[["Security worker"]]
   review["Review"]
   pr(["PR"])
   intel[["Codebase intelligence"]]
   learn[["Learning loop"]]
 
-  spec --> plan --> build --> verify --> review --> pr
+  spec --> router --> plan --> build --> verify --> review --> pr
+  router -.->|"harness tier"| build
+  sec -.->|"adversarial pass"| verify
   intel -.->|context| plan
   intel -.->|context| build
   verify -.->|traces| learn
@@ -35,9 +48,11 @@ flowchart LR
   classDef spine fill:#E1F5EE,stroke:#0F6E56,color:#04342C;
   classDef sub fill:#EEEDFE,stroke:#534AB7,color:#26215C;
   classDef io fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A;
+  classDef gate fill:#FAEEDA,stroke:#854F0B,color:#412402;
   class plan,build,verify,review spine
-  class intel,learn sub
+  class intel,learn,sec sub
   class spec,pr io
+  class router gate
 ```
 
 ---
