@@ -12,7 +12,7 @@ The spec-to-PR spine (solid), with codebase intelligence feeding context in and 
 
 **Autonomy ladder:** Athena sits at rung two — 94% tool adoption is pair-programming, which is exactly why cycle time is stuck at +11%. The factory moves the CRUD pattern to rung five: agents plan, build, verify, and assemble while humans stay on the gates. The trust ladder is that climb made incremental — a gate collapses only when a production metric earns it, never on a schedule.
 
-**Build, don't buy or wait:** the model is a commodity by design, so the durable asset is the layer a vendor cannot own — the seven-repo convention and exemplar index, the golden set grown from Athena's own production failures, and the eval harness encoding what "correct at Athena" means. Vendors optimize the 22% (writing code); this targets the 78% (conventions, gates, compliance). Reversible: if a vendor ships orchestration, the specs, skills, and evals port onto it.
+**Build, don't buy or wait:** the model is a commodity by design, so the durable asset is the layer a vendor cannot own — the seven-repo convention and exemplar index (an *exemplar* is the canonical existing implementation of a pattern in a given repo — the reference new code is matched to, so output reads as native), the golden set grown from Athena's own production failures, and the eval harness encoding what "correct at Athena" means. Vendors optimize the 22% (writing code); this targets the 78% (conventions, gates, compliance). Reversible: if a vendor ships orchestration, the specs, skills, and evals port onto it.
 
 ```mermaid
 flowchart LR
