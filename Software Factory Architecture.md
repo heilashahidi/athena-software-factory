@@ -306,75 +306,7 @@ flowchart LR
 
 ---
 
-## 9. Spec-driven lifecycle — human-in-the-loop
-
-The temporal view: where the human approves, where context is pulled, how a stage failure is handled, and the two end gates — QA sign-off (does it behave correctly) then risk-routed review (is the code right).
-
-1. Engineer sends the product brief to the spec compiler.
-2. The compiler returns the formal, typed spec.
-3. **Human gate** — approve the spec.
-4. The conductor requests plan context from codebase intelligence, which returns exemplars, profile, and architectural facts.
-5. The conductor returns the generation plan (the DAG).
-6. **Human gate** — approve the plan; nothing runs before the migrate gate.
-7. **Generation loop** — per stage in dependency order: the conductor dispatches to a harnessed worker, which retrieves context and returns the artifact; the conductor runs stage checks and CI in the loop; on pass the stage is green, on fail it retries within bounds or escalates.
-8. **QA review (human gate):** the conductor sends the test plan, results, screenshots, and a live environment; the reviewer does exploratory and acceptance testing; sign-off approves, otherwise it adds cases or rejects back to the tests worker.
-9. The conductor sends the assembled PR to the risk router, which routes by risk with diffs and provenance.
-10. **Human gate** — approve, correct, or re-run.
-
-```mermaid
-sequenceDiagram
-  autonumber
-  actor Eng as Engineer
-  participant Spec as Spec compiler
-  participant Intel as Codebase intelligence
-  participant Cond as Conductor
-  participant Work as Harnessed workers
-  participant Ver as Verification
-  participant Risk as Risk router
-  actor QA as QA reviewer
-
-  Eng->>Spec: Product brief
-  Spec-->>Eng: Formal spec (typed)
-  Note over Eng,Spec: Human gate · approve spec
-  Eng->>Cond: Approve spec
-  Cond->>Intel: Request plan context
-  Intel-->>Cond: Exemplars, profile, facts
-  Cond-->>Eng: Generation plan (DAG)
-  Note over Eng,Cond: Human gate · approve plan
-  Eng->>Cond: Approve plan, gate before migrate
-
-  rect rgb(244, 244, 242)
-  loop Each stage in dependency order
-    Cond->>Work: Dispatch stage with harness + skills
-    Work->>Intel: Retrieve feature context
-    Work-->>Cond: Stage artifact
-    Cond->>Ver: Stage checks + CI in loop
-    alt Pass
-      Ver-->>Cond: Green
-    else Fail
-      Ver-->>Cond: Retry bounded or escalate
-    end
-  end
-  end
-
-  rect rgb(250, 238, 218)
-  Cond->>QA: Test plan, results, screenshots, live env
-  QA->>QA: Exploratory + acceptance testing
-  alt Sign off
-    QA-->>Cond: Approved
-  else Add cases or reject
-    QA-->>Cond: Send back to tests worker
-  end
-  end
-
-  Cond->>Risk: Assembled PR
-  Risk-->>Eng: Route by risk with diffs + provenance
-  Eng->>Risk: Approve, correct, or re-run
-```
-
----
-
-## 10. Skill lifecycle
+## 9. Skill lifecycle
 
 Skills are the unit of reuse, so creation is a defined workflow, not one-time authoring. A skill is born hand-authored or graduated from traces, passes its own eval set and human review, runs in shadow before going active, and is retired when it underperforms.
 
@@ -411,7 +343,7 @@ flowchart LR
 
 ---
 
-## 11. Eval architecture
+## 10. Eval architecture
 
 Evals are the load-bearing layer: because the brain is a stochastic LLM, evals convert nondeterministic generation into a gated, measurable, improvable system — nothing advances without passing one, and each harness carries its stage's eval as its definition of done. One governed golden set feeds a harness that gates four levels, and the golden set grows from every QA finding and production failure.
 
@@ -440,7 +372,7 @@ flowchart LR
 
 ---
 
-## 12. Legacy change flow — brownfield surgery
+## 11. Legacy change flow — brownfield surgery
 
 When a feature modifies existing code rather than adding fresh, the legacy-hardening layer runs first: impact analysis sizes the blast radius, characterization tests pin current behavior before any change, and a behavior-diff gate separates intended changes from regressions.
 
@@ -475,7 +407,7 @@ flowchart TB
 
 ---
 
-## 13. Worked example — Payment Methods, brief to PR
+## 12. Worked example — Payment Methods, brief to PR
 
 The case study's 3.5-day senior-engineer build, run through the factory. Each stage shows the artifact it hands the next — the typed handoffs that replace prose, the concrete answer to BMAD's brittle sequential handoff.
 

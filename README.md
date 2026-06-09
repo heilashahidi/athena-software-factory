@@ -5,7 +5,7 @@ A response to the "Software Factory" case study ([`PRD-Athena.md`](PRD-Athena.md
 ## Contents
 
 - **[Software Factory Architecture.md](Software%20Factory%20Architecture.md)** — the full design: spec-driven, skill-composed, eval-gated. Diagrams render at the live site below.
-- **Live site:** https://heilashahidi.github.io/athena-software-factory/ — the architecture rendered with all 8 diagrams.
+- **Live site:** https://heilashahidi.github.io/athena-software-factory/ — the architecture rendered with all 11 diagrams.
 - **[poc/](poc/)** — a runnable vertical slice. `node poc/run.mjs` takes the Payment Methods brief and produces a reviewable PR with the eval gates and CI **actually executing**. See [`poc/README.md`](poc/README.md).
 - **[OBJECTION-MAP.md](OBJECTION-MAP.md)** — defense prep: the hardest panel objections with concede-reframe-commit answers.
 - **[building-your-own-software-factory-summary.md](building-your-own-software-factory-summary.md)** — the source talk the design draws on.

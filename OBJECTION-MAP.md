@@ -108,12 +108,12 @@ You have an answer; a sharp panelist can still widen it. Tighten these.
 ### O13 · Evals catch syntax, not the spec author's blind spots
 **Attack:** "Deterministic checks catch compile/lint/types. Functional correctness rests on spec-derived tests and an LLM judge — both bounded by the acceptance block. If the author forgot a criterion, the tests are confidently wrong *together* and the judge approves. Where's the independent ground truth for a novel feature?"
 **Say:** "Correct is defined by acceptance criteria, so a missing criterion is the real blind spot — and no human team escapes that either. Three mitigations: the QA reviewer does *exploratory* testing, not just the generated tests; the pattern template ships the standard CRUD acceptance criteria so common omissions are templated in; and every production failure graduates into the golden set, closing the blind spot after first occurrence. The factory at least makes the criteria explicit and reusable instead of tribal."
-**Anchor:** §2 acceptance criteria; §6 QA; §11 golden set.
+**Anchor:** §2 acceptance criteria; §6 QA; §10 golden set.
 
 ### O14 · Same model everywhere = correlated failure, no independent vote
 **Attack:** "'Every worker is the same model' means when the model has a systematic blind spot, the generator makes the error, the test-writer (same model) doesn't test for it, and the judge (same model) approves it. Three correlated draws. You removed the independent second opinion and call it a virtue."
 **Say:** "True, and I won't pretend the LLM eval layers are independent votes — they're correlated with the generator. The independent axes are the deterministic checks (compile/lint/types/CI/SAST) and the human QA gate; those are what actually catch a systematic blind spot. Cheap added diversity is running the judge on a *different* model, which I'd do for high-risk stages. But I rely on deterministic-plus-human for independence, not on stacked LLM evals."
-**Anchor:** §metrics (same-brain); §11.
+**Anchor:** §metrics (same-brain); §10.
 
 ### O15 · Bounded retries on a stochastic model don't converge
 **Attack:** "A retry is the same model, same harness, same input — why would attempt 2 differ except by sampling noise? And if frontend fails because the api contract is subtly wrong, checkpointed re-runs of frontend against a bad upstream artifact can never pass. What's the cross-stage rollback?"
@@ -141,7 +141,7 @@ You have an answer; a sharp panelist can still widen it. Tighten these.
 
 Confident ground. State it and don't linger.
 
-- **O19 · "How is this not Ralph or BMAD?"** Deterministic conductor + typed artifacts + eval gates. The swarm is opaque; this is traceable and auditable — the exact property a regulated shop needs. Typed `api-contract.artifact` (shown in §13) is the named fix for BMAD's prose-handoff brittleness.
+- **O19 · "How is this not Ralph or BMAD?"** Deterministic conductor + typed artifacts + eval gates. The swarm is opaque; this is traceable and auditable — the exact property a regulated shop needs. Typed `api-contract.artifact` (shown in §12) is the named fix for BMAD's prose-handoff brittleness.
 - **O20 · "What's genuinely novel vs. a wrapper?"** It's integration, not invention — and that's the point: typed handoffs, per-engine exemplars, characterization-gated brownfield surgery, four-level evals turning stochastic generation into a gated system. The value is the *system*, not a new algorithm. (Pair this with O5's moat answer.)
 - **O21 · "Won't the self-improving loop game itself?"** v1 defers auto-graduation, so the loop isn't closed yet. Steady-state, the golden set grows from *production failures and human QA* — external ground truth — not the factory's own confidence, and the judge is calibrated against held-out *human* decisions. The external signals keep it honest.
 - **O22 · Golden-set bootstrap (10–15 specs is thin).** Acknowledged and scoped — it's a v1 seed; the gates are backed by deterministic checks and human QA while it grows. It's explicitly a lagging signal that sharpens exactly where the factory has been wrong.
