@@ -303,6 +303,7 @@ flowchart LR
 - **Memory & taste store:** accepted diffs, transcripts, screenshots, and review decisions — sharpens the exemplars retrieval serves.
 - **Production signals:** each deployed change emits DORA back into evals and memory; a production failure becomes a golden-set entry and a rule — the loop closing past the PR to production reality.
 - **Lifecycle automations:** the factory closes its own loops. Flagship: stale feature-flag cleanup — once a flag is fully rolled out, a fast-lane removal spec runs through the same machinery to delete it and its dead branches. The template for any recurring chore the traces surface (dependency bumps, config drift, log triage).
+- **Not reinforcement learning (by design):** the loop improves the *harness* — skills, guardrails, exemplars, memory, the golden set — never the model's weights. No fine-tuning or RLHF; the model stays a frozen, swappable commodity. Athena's production data compounds as evals and exemplars, not as training data, which keeps improvement auditable and reversible.
 
 ---
 
@@ -366,6 +367,7 @@ flowchart LR
 
 - **Four levels, each a gate:** per-skill (library entry), per-stage (between DAG stages), per-feature (the verify gate — real CI + spec-conformance, the 80% bar), per-factory (dashboard + DORA, gating trust-ladder collapse).
 - **Two methods:** deterministic checks for hard criteria (compile, lint, types, CI, security policy, characterization) and an LLM judge for fuzzy criteria (conformance, acceptance satisfaction, "would a senior say a teammate wrote this").
+- **Rubrics (how the judge scores):** each fuzzy criterion has an explicit, versioned rubric — a named scale the judge scores against (e.g. conformance: *matches exemplar / minor drift / wrong pattern*), not a vibe. Rubrics live with the golden set and are calibrated against human verdicts, so "teammate-written" is a defined bar, not the judge's mood.
 - **Golden set (ground truth):** curated, versioned specs paired with known-good PRs plus each spec's acceptance criteria — shared central infrastructure, grown from every QA finding and production failure.
 - **Trusting the judge:** the judge is itself eval'd against human decisions on a held-out set and re-checked when the model changes, so a drifting judge can't silently corrupt the gates.
 - **Eval-driven:** the eval is written with the acceptance criteria and each skill, before generation — the factory knows what correct means before it builds.
