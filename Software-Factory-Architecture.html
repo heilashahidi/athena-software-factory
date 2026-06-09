@@ -654,7 +654,7 @@ el.querySelectorAll('code.language-mermaid').forEach(c => {
   c.closest('pre').replaceWith(div);
 });
 mermaid.initialize({ startOnLoad:false, theme:'base', securityLevel:'loose',
-  flowchart:{ htmlLabels:true, useMaxWidth:true, padding:10 },
+  flowchart:{ htmlLabels:false, useMaxWidth:true, padding:10 },
   themeVariables:{
     fontFamily:'-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
     fontSize:'14px' } });
