@@ -1,0 +1,12 @@
+{
+  "name": "athena-factory-poc",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Runnable vertical slice of the Athena software factory: brief -> spec -> plan -> gated stages -> PR.",
+  "scripts": {
+    "demo": "node run.mjs",
+    "demo:flaky": "node run.mjs --flaky migrate",
+    "demo:fail": "node run.mjs --fail api"
+  }
+}
