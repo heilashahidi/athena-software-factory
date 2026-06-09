@@ -463,25 +463,39 @@ The case study's 3.5-day senior-engineer build, run through the factory. Each st
 
 Validator gates here: no acceptance criteria, no plan. **Human gate — approve spec.**
 
+**Stage 1b — Risk router.** Reads the spec before the plan is generated. `payments-dashboard` is fintech, the spec touches Vault (`vault_ref`), audit logging, and a permission gate — three high-risk signals. Router assigns tier: **high-risk**. Consequences: migration harness (Postgres variant), compliance worker mandatory, security worker mandatory, red-team pass before PR, human gate on plan and PR. A low-risk CRUD on a non-regulated product would skip the last three.
+
 **Stage 2 — Plan generator → DAG.** The only creative planning step; human-approved before anything runs:
 
 ```json
 {
   "plan_id": "pf-20260315-001",
+  "risk_tier": "high",
+  "harnesses": {
+    "migrate": "migration:postgres",
+    "api": "build:crud_ui",
+    "frontend": "build:crud_ui",
+    "tests": "build:crud_ui",
+    "config": "build:crud_ui",
+    "security": "security_worker",
+    "compliance": "compliance_worker"
+  },
   "stages": [
     {"id":"migrate","type":"db_migration","depends_on":[],"engine":"postgres"},
     {"id":"api","type":"rest_endpoints","depends_on":["migrate"]},
     {"id":"frontend","type":"react_components","depends_on":["api"]},
     {"id":"tests","type":"test_suite","depends_on":["api","frontend"]},
-    {"id":"config","type":"feature_flags_and_permissions","depends_on":[]}
+    {"id":"config","type":"feature_flags_and_permissions","depends_on":[]},
+    {"id":"security","type":"security_worker","depends_on":["api","frontend","tests"]},
+    {"id":"compliance","type":"compliance_worker","depends_on":["api","frontend","config"]}
   ],
   "estimated_files": 14, "requires_human_approval_before": ["migrate"]
 }
 ```
 
-**Human gate — approve plan.** `config` runs in parallel with the `migrate → api → frontend` chain.
+**Human gate — approve plan.** `config` runs in parallel with the `migrate → api → frontend` chain. `security` and `compliance` workers run after build stages complete, before the verify gate.
 
-**Stage 3 — `migrate`.** Retrieves the Postgres exemplar; the unique-default criterion becomes a partial index, not application code:
+**Stage 3 — `migrate`.** Runs under the **migration harness (Postgres variant)**: retrieves the Postgres exemplar, enforces a rollback-safe down-migration, and checks zero-downtime safety (no `ALTER TABLE ... SET NOT NULL` on a live table without a backfill). The unique-default criterion becomes a partial index, not application code:
 
 ```sql
 CREATE TYPE payment_method_type AS ENUM ('credit_card','ach','wire');
@@ -499,7 +513,7 @@ CREATE UNIQUE INDEX one_default_per_merchant
   ON payment_methods (merchant_id) WHERE is_default;
 ```
 
-Gate: applies and rolls back cleanly in the isolated DB; the security gate confirms no destructive operation without a guard → green.
+Migration harness gate: applies and rolls back cleanly in the isolated DB; migration linter confirms no unguarded `DROP`, no `SET NOT NULL` without a default, and a valid down-migration exists → green.
 
 **Stage 4 — `api`.** Consumes the migration; emits endpoints *and* a typed contract artifact — what the frontend stage receives, not a prose handoff:
 
@@ -553,15 +567,32 @@ flag: payment_methods_management        # ships dark, flipped per environment
 permission: payment_methods:manage -> roles: [merchant_admin, finance_ops]
 ```
 
-**Stage 8 — Verify gate.** Real CI (unit + integration) runs in the isolated environment; the security gate and spec-conformance judge run alongside. All green → the PR assembles. (See §6 Verification for what "first-run pass" precisely means in-loop.)
+**Stage 8a — Security worker.** Runs after all build stages complete, before CI. Adversarial posture, read-only — its job is to break what the build workers produced. Checks against OWASP top 10 and Athena's SOC 2 controls. Findings on this feature:
 
-**Stage 9 — QA review (human gate).** The reviewer gets the test plan, the coverage/pass report, the UI recording, and a live clickable deployment — not the diff to re-run. They confirm the five acceptance criteria by hand and sign off; any case they add becomes a golden-set entry.
+- Confirmed: every endpoint enforces `payment_methods:manage` — no bypass path found.
+- Confirmed: `vault_ref` is write-only on the API input schema; never returned in GET responses.
+- Confirmed: audit entries include actor ID and before/after state on all mutations.
+- No SQL injection surface: all queries use parameterised statements via the ORM.
+- No finding → security worker passes.
 
-**Stage 10 — Risk router → PR.** Payments is regulated and money-touching, so the router forces mandatory human review and runs the red-team pass first. The PR carries a provenance report:
+**Stage 8b — Compliance worker.** Confirms the required controls are *present* (distinct from security finding what's absent or exploitable). Checks the compliance checklist for a HIPAA/SOC 2 fintech feature:
+
+- ✓ Audit log wired on every create/update/delete (acceptance criterion 3 verified structurally).
+- ✓ `vault_ref` field marked `sensitive: true` in spec; Vault-client skill used; raw credentials absent from DB schema and logs.
+- ✓ Permission gate `payment_methods:manage` present on all five endpoints.
+- ✓ No PHI fields introduced without a data-classification annotation.
+- ✓ Change traces to approved spec `pf-20260315-001` with named approver — satisfies SOC 2 CC8.1 segregation of duties.
+- Compliance worker passes.
+
+**Stage 9 — Verify gate.** Real CI (unit + integration) runs in the isolated environment; spec-conformance judge runs alongside. Both workers already passed. All green → PR assembles. (See §6 Verification for what "first-run pass" precisely means in-loop.)
+
+**Stage 10 — QA review (human gate).** The reviewer gets the test plan, the coverage/pass report, the UI recording, the security worker findings, the compliance checklist, and a live clickable deployment — not the diff to re-run. They confirm the five acceptance criteria by hand and sign off; any case they add becomes a golden-set entry.
+
+**Stage 11 — Risk router → PR.** Payments is regulated and money-touching — the router already assigned high-risk at Stage 1b, so the red-team pass ran (Stage 8a) and mandatory human review is enforced. The PR carries a provenance report:
 
 > 14 files. Matched the Vault-client pattern from `billing-service`, the table component from `merchant-dashboard/ui`, and the audit-logging mixin from `payments-core`. Unique-default enforced at the DB via partial index. Spec `pf-20260315-001`; every file links to its spec field.
 
-**Human gate — approve, correct, or re-run.** What took 3.5 days — most of it looking up how Athena does Vault, permissions, audit, and table conventions — arrives as a reviewable PR; the engineer's time moves from building to specifying and reviewing.
+**Human gate — approve, correct, or re-run.** What took 3.5 days — most of it looking up how Athena does Vault, permissions, audit, and table conventions — arrives as a reviewable PR with security and compliance sign-off already attached. The engineer's time moves from building to specifying and reviewing; the security and compliance workers mean the review starts from a higher baseline than a hand-built feature typically arrives with.
 
 ---
 
