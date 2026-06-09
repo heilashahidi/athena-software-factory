@@ -281,6 +281,8 @@ flowchart LR
 
 The case study's 3.5-day senior-engineer build, run through the factory. Each stage shows the artifact it hands the next — the typed handoffs that replace prose, which is the concrete answer to BMAD's brittle sequential handoff.
 
+> **Runnable:** this exact flow is implemented as a working slice in [`poc/`](https://github.com/heilashahidi/athena-software-factory/tree/main/poc). `node poc/run.mjs` produces the PR below with the eval gates and CI actually executing; `--flaky migrate` and `--fail api` demonstrate retry-recovery and a compiles-but-wrong change being caught and escalated. See the [POC README](https://github.com/heilashahidi/athena-software-factory/tree/main/poc#readme).
+
 **Stage 0 — Brief.** The engineer pastes the product brief verbatim:
 
 > Add a "Payment Methods" management page to the merchant dashboard. Add, edit, delete, set a default. Each method has a type (credit card, ACH, wire), a label, and credentials stored via Vault. List with sorting and filtering, detail/edit form. Audit log every change. Gate behind `payment_methods:manage`.
