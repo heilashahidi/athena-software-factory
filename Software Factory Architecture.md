@@ -420,7 +420,37 @@ permission: payment_methods:manage -> roles: [merchant_admin, finance_ops]
 ## Component reference
 
 ### 1 · Spec authoring (source of truth)
-The spec is the human's primary surface and the contract everything derives from.
+The spec is the human's primary surface and the contract everything derives from. A brief plus a pattern template compiles into a typed spec; the validator gates it on completeness and consistency; a human approves it; the versioned spec is the audit trail everything downstream traces to.
+
+```mermaid
+flowchart TB
+  brief[/"Product brief · Linear / Jira / Notion"/] --> compiler["Spec compiler · brief to typed spec"]
+  template[("Pattern template · CRUD / Integration / ...")] --> compiler
+  compiler --> spec[/"Formal spec · fields + acceptance criteria"/]
+  spec --> split{"Oversized?"}
+  split -->|"yes"| smaller["Split into one-feature specs"]
+  smaller -.-> spec
+  split -->|"no"| validate{"Validator · complete + consistent vs codebase"}
+  intel[["Codebase intelligence"]] -.->|"structural index"| validate
+  validate -->|"incomplete / conflict"| back["Back to author"]
+  back -.-> compiler
+  validate -->|"valid"| approve{"Human gate · approve spec"}
+  approve --> versioned[("Versioned spec + audit trail")]
+  versioned --> plan[/"to Plan generator"/]
+  amend["Worker decision off-spec"] -.->|"proposed amendment"| approve
+
+  classDef stage fill:#E1F5EE,stroke:#0F6E56,color:#04342C;
+  classDef store fill:#EEEDFE,stroke:#534AB7,color:#26215C;
+  classDef io fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A;
+  classDef human fill:#FAEEDA,stroke:#854F0B,color:#412402;
+  classDef warn fill:#FCEBEB,stroke:#A32D2D,color:#501313;
+  class compiler,smaller stage
+  class template,versioned,intel store
+  class brief,spec,plan io
+  class approve human
+  class back,amend warn
+```
+
 - Spec compiler: turns a natural-language product brief into a typed, schema-validated formal spec (the case study's JSON — `product`, `pattern`, `entity`, `fields`, `permissions`, `audit`, `integrations`, `ui`).
 - Versioning: every spec is versioned; generated artifacts carry the spec id and field references for provenance.
 - Amendment rule: any worker decision not covered by the spec is surfaced as a proposed spec amendment for human approval, so the spec never drifts from what ships.
@@ -510,7 +540,35 @@ Primitives make the codebase legible and guardrails constrain risk; enablers giv
 - MCP as the substrate: connectors are MCP servers, so adding a new source (Slack, PagerDuty, the internal `athena-cli`) is configuration, not a new subsystem — the same one-system-not-seven discipline applied to integrations.
 
 ### 5 · Verification (CI in the loop)
-Verification is woven in per-stage, with the product's real CI as the source of truth.
+Verification is woven in per-stage, with the product's real CI as the source of truth. It is a defense-in-depth stack — cheap deterministic checks first, then conformance and a non-skippable security floor, then spec-derived tests and real CI, then a risk-weighted human QA gate on top.
+
+```mermaid
+flowchart TB
+  artifact[/"Stage artifact"/] --> checks["Per-stage checks · compile · lint · typecheck"]
+  checks --> conform["Pattern conformance · LLM judge + static vs exemplar"]
+  conform --> sec["Security policy gate · deterministic floor: SAST, migration linter, OPA"]
+  sec --> ui["UI verification · browser + screenshot, frontend stage"]
+  ui --> tests["Spec-derived tests · from acceptance, not implementation"]
+  tests --> ci{"Real CI in loop · green?"}
+  ci -->|"fail"| retry["Bounded retry, then escalate to human"]
+  retry -.-> artifact
+  ci -->|"pass"| qa{"Human QA · risk-weighted, live env"}
+  qa -->|"sign off"| pr[/"to Review / PR"/]
+  qa -->|"add cases / reject"| tests
+  qa -.->|"findings"| learn[["Learning loop · golden set + rules"]]
+
+  classDef stage fill:#E1F5EE,stroke:#0F6E56,color:#04342C;
+  classDef store fill:#EEEDFE,stroke:#534AB7,color:#26215C;
+  classDef io fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A;
+  classDef human fill:#FAEEDA,stroke:#854F0B,color:#412402;
+  classDef warn fill:#FCEBEB,stroke:#A32D2D,color:#501313;
+  class checks,conform,sec,ui,tests stage
+  class artifact,pr io
+  class qa human
+  class retry warn
+  class learn store
+```
+
 - Per-stage checks: compile, lint, typecheck — a stage does not complete until its output is syntactically valid and type-safe.
 - Pattern conformance: an LLM judge plus static checks against the retrieved exemplar.
 - Security policy gate: a deterministic, non-skippable floor for the regulated repos — it is policy code, not the LLM judge. Concretely: SAST/semgrep rules that assert a permission check on every endpoint; a migration linter that blocks `DROP` and destructive `ALTER` without a reviewed guard and requires a reversible down-migration; an OPA-style policy engine over the diff. The LLM judge is a second layer on top of this floor, never a substitute for it. Semantic cases the floor cannot decide — a permission check present but on the wrong resource — are caught by a spec-derived test ("a user cannot reach another merchant's records") plus mandatory human review on regulated output. Defense in depth; the bottom layer is deterministic.
@@ -522,7 +580,33 @@ Verification is woven in per-stage, with the product's real CI as the source of 
 - QA feeds the flywheel: cases a reviewer adds and behaviors they flag become golden eval set entries and emergent rules, making human QA the highest-signal input to factory improvement. As the eval suite proves out, the gate collapses to risk-weighted sign-off the same way code review does.
 
 ### 6 · Human interface and output
-Progressive disclosure with intervention at every stage and a trust ladder that tightens over time.
+Progressive disclosure with intervention at every stage and a trust ladder that tightens over time. The risk router routes the assembled change by blast radius; high-risk output gets a red-team pass and mandatory human review; the emitted PR carries provenance so the human can meaningfully certify it.
+
+```mermaid
+flowchart TB
+  assembled[/"Assembled change + generation report"/] --> router{"Risk router · by blast radius"}
+  router -->|"low-risk CRUD"| light["Light review · clean diff + provenance"]
+  router -->|"auth / payments / migrations / regulated"| redteam["Red-team agent · adversarial pass"]
+  redteam --> mandatory["Mandatory human review"]
+  light --> human{"Human gate · approve / correct / re-run"}
+  mandatory --> human
+  human -->|"approve"| pr[/"Reviewable PR"/]
+  human -.->|"re-run"| factory["Back through factory"]
+  cfr[("Change-fail-rate")] -.->|"earns gate collapse"| router
+  coherence["Standing coherence pass"] -.->|"refactor specs"| factory
+
+  classDef stage fill:#E1F5EE,stroke:#0F6E56,color:#04342C;
+  classDef store fill:#EEEDFE,stroke:#534AB7,color:#26215C;
+  classDef io fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A;
+  classDef human fill:#FAEEDA,stroke:#854F0B,color:#412402;
+  classDef warn fill:#FCEBEB,stroke:#A32D2D,color:#501313;
+  class light,factory,coherence stage
+  class redteam warn
+  class mandatory,human human
+  class assembled,pr io
+  class cfr store
+```
+
 - Risk router (agentic code owner): low-risk diffs get light review; anything touching auth, payments, migrations, or a regulated repo gets mandatory human review.
 - Red-team agent: an adversarial pass before a human engages, for high-risk and regulated output.
 - Review interface: clean diffs, clear commit messages, and a generation report with provenance — "matched the Vault client pattern from billing-service." Provenance is what converts a black box into something a senior engineer trusts.
