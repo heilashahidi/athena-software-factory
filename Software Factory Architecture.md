@@ -554,6 +554,8 @@ DORA (DevOps Research and Assessment, popularized in *Accelerate*) identified fo
 
 DORA is the factory's north star — the case study's stuck +11% cycle time is a delivery-lead-time result, so DORA is the scoreboard the factory is built to move. It defines success (throughput proves the productivity gain, stability keeps it honest), bridges internal to business (leading indicators predict DORA), closes the loop (deployed changes emit DORA back), and governs autonomy (change fail rate gates how far the trust ladder collapses).
 
+**Where observability lives:** not a standalone subsystem — it is the learning loop's front half (§8), and these metrics are its output. The trace store (OpenTelemetry-style spans on every tool call) is the instrument; the dashboard is the display *and* a control surface, since it gates trust-ladder collapse (§7); the eval suite consumes harvested traces. The thread runs through the rest of the architecture: the audit trail starts at the spec (§2, every generated file maps to a spec field), the parity check (§6) alarms on environment drift, and the same trace store — append-only, tamper-evident — doubles as the SOC 2 / HIPAA change record.
+
 Measure at two levels, and don't confuse them:
 - **Leading (fast, internal, per skill/stage):** first-run CI pass rate, human-cleanup time (the PRD's ≤30-minute line), pattern conformance, characterization stability, per-skill eval scores. Diagnostic and fixable — they tell you which skill to improve. Since every agent is the same brain, all variation lives here.
 - **Lagging — the DORA four,** at the delivery-system and per-product level, never per agent. What the CTO actually judges the factory on.
