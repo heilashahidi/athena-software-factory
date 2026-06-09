@@ -16,12 +16,14 @@ The spec-to-PR spine (solid), with codebase intelligence feeding context in and 
 
 **Risk router:** sits between the spec and orchestration. Reads the spec and assigns a risk tier based on what the change touches — auth, payments, PHI, schema migrations, public API surface — then routes to the appropriate harness. Low-risk CRUD gets a fast lane (fewer gates, auto-approve eligible); high-risk changes get a hardened harness with tighter tool scope, the security worker, and mandatory human gates. This is what lets the trust ladder collapse *selectively*: autonomy expands for low-risk work without ever removing safeguards from high-risk work.
 
-**Same model, different harness:** every worker is the same underlying LLM — the model is a swappable commodity. What differentiates workers is the harness: the context, tools, skills, memory, and success criterion each is given. Four harness types earn their existence by having genuinely distinct postures:
+**Same model, different harness:** every worker is the same underlying LLM — the model is a swappable commodity. What differentiates workers is the harness: the context, tools, skills, memory, and success criterion each is given. Six harness types earn their existence by having genuinely distinct postures:
 
-- **Build harness** — constructs artifacts; success = output passes spec and eval.
+- **Build harness** — constructs artifacts; success = output passes spec and eval. One variant per pattern (CRUD+UI, Integration, Workflow, Analytics) because each has a different anatomy — a Workflow harness needs state-machine awareness, Analytics needs aggregation-query exemplars.
 - **Security worker** — adversarial posture, read-only tools; success = finding vulnerabilities in what the build workers produced, not validating that things work. Runs independently of the build workers so it has no bias toward approving its own output. Context: OWASP top 10, Athena's compliance controls (HIPAA/SOC 2), known attack patterns as exemplars.
+- **Compliance worker** — distinct from security: security finds vulnerabilities, compliance confirms the right controls are *present*. Checks that audit logging is wired up, Vault refs are used (never raw credentials), every endpoint has a permission gate, and PHI data classifications are correct. Mandatory on fintech and healthtech products; the PRD's "no credential leaks, no bypassed auth checks" is a contractual requirement, not a suggestion.
+- **Integration harness** — purpose-built for Athena's Integration pattern (24% of features): connecting to payment processors, EHRs, and carrier APIs. Standard build harness has no awareness of external API contracts, retry/backoff requirements, or webhook idempotency. This harness adds: external contract validation, retry-with-backoff as a non-optional default, idempotency key enforcement on state-mutating calls, and circuit-breaker patterns as exemplars. Failures in this pattern are the highest-blast-radius because they cross service boundaries into third-party systems.
 - **Migration harness** — database changes are irreversible in production; this harness adds rollback planning, zero-downtime strategy checks, and a backward-compatibility gate that the standard build harness omits. One per DB engine (Postgres, MongoDB, DynamoDB, Redis) because migration semantics diverge at the engine level.
-- **Performance harness** — adversarial to latency on data-heavy paths; success = finding N+1 queries, missing indexes, and expensive operations before they ship. Context: existing query plans, performance baselines, known slow patterns per product.
+- **Performance harness** — adversarial to latency on data-heavy paths; success = finding N+1 queries, missing indexes, and expensive operations before they ship. Primarily invoked for the Analytics pattern (16% of features) where aggregation queries over production data are the norm. Context: existing query plans, performance baselines, known slow patterns per product.
 
 ```mermaid
 flowchart LR
@@ -31,6 +33,7 @@ flowchart LR
   build["Workers"]
   verify["Verification"]
   sec[["Security worker"]]
+  comply[["Compliance worker"]]
   review["Review"]
   pr(["PR"])
   intel[["Codebase intelligence"]]
@@ -39,6 +42,7 @@ flowchart LR
   spec --> router --> plan --> build --> verify --> review --> pr
   router -.->|"harness tier"| build
   sec -.->|"adversarial pass"| verify
+  comply -.->|"controls check"| verify
   intel -.->|context| plan
   intel -.->|context| build
   verify -.->|traces| learn
@@ -50,7 +54,7 @@ flowchart LR
   classDef io fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A;
   classDef gate fill:#FAEEDA,stroke:#854F0B,color:#412402;
   class plan,build,verify,review spine
-  class intel,learn,sec sub
+  class intel,learn,sec,comply sub
   class spec,pr io
   class router gate
 ```
