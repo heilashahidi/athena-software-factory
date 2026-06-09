@@ -435,7 +435,37 @@ The spec is the human's primary surface and the contract everything derives from
 For example, the Payment Methods spec gains an `acceptance` block alongside its fields — default is unique per merchant, deleting the default promotes the next method, every change writes an audit entry, non-permitted users get a 403 — and those criteria, not the implementation, are what the spec-derived tests and the QA reviewer check against.
 
 ### 2 · Codebase intelligence (one system, seven repos)
-Learns each product's conventions well enough that output reads as native.
+Learns each product's conventions well enough that output reads as native. One indexer feeds four stores, a hybrid retrieval serves them as context to the spine, and two loops keep it fresh — re-index on merge, and exemplars graduated by the learning loop.
+
+```mermaid
+flowchart TB
+  repos[/"Seven repos · three languages"/] --> indexer["Indexer · language parsers feed one unified schema"]
+  indexer --> struct[("Structural index · symbol + dependency graph")]
+  indexer --> exemplar[("Exemplar store · canonical pattern per repo + engine")]
+  indexer --> facts[("Architectural facts · Vault, permissions, audit, tables")]
+  indexer --> profile[("Product profiles · stable conventions, per-product prompt")]
+
+  struct --> retrieval{{"Retrieval · hybrid: semantic + graph + exemplar"}}
+  exemplar --> retrieval
+  facts --> retrieval
+  profile --> retrieval
+  retrieval -->|context| consumers[/"Spec validator · Plan generator · Workers"/]
+
+  merge["Merge to a repo"] -.->|"re-index hook"| indexer
+  learn[["Learning loop"]] -.->|exemplars| exemplar
+  cold{"Cold start · validate conventions once"} -.-> profile
+
+  classDef proc fill:#E1F5EE,stroke:#0F6E56,color:#04342C;
+  classDef store fill:#EEEDFE,stroke:#534AB7,color:#26215C;
+  classDef io fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A;
+  classDef human fill:#FAEEDA,stroke:#854F0B,color:#412402;
+  class indexer,retrieval proc
+  class struct,exemplar,facts,profile store
+  class repos,consumers,merge io
+  class learn store
+  class cold human
+```
+
 - Indexer: language-specific parsers feed a single unified schema, so seven repos in three languages are one system, not seven.
 - Structural index: symbol and dependency graph — answers "where does auth get checked," not just text similarity.
 - Exemplar store: the canonical implementation of each pattern in each repo, keyed by language and database engine — the four engines (Postgres, MongoDB, DynamoDB, Redis) diverge most at the migration and persistence layer, so there is no single migration skill but one per engine, each retrieved against the target product. This is what makes generated code look like a teammate wrote it.
