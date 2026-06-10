@@ -123,6 +123,9 @@ export default function App() {
 
   const onNodeDragStart = useCallback(() => { dragged.current = false; }, []);
   const onNodeDrag = useCallback(() => { dragged.current = true; }, []);
+  const onNodeDragStop = useCallback(() => {
+    setTimeout(() => { dragged.current = false; }, 100);
+  }, []);
 
   const onNodeClick = useCallback((_, node) => {
     if (dragged.current) return;
@@ -172,6 +175,7 @@ export default function App() {
           onNodeClick={onNodeClick}
           onNodeDragStart={onNodeDragStart}
           onNodeDrag={onNodeDrag}
+          onNodeDragStop={onNodeDragStop}
           onPaneClick={onPaneClick}
           nodeTypes={nodeTypes}
           connectionMode={ConnectionMode.Loose}
