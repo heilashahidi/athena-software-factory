@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect, useRef } from 'react';
 import {
   ReactFlow,
   Background,
@@ -8,15 +8,36 @@ import {
   useEdgesState,
   Handle,
   Position,
+  ConnectionMode,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { INITIAL_NODES, INITIAL_EDGES, NODE_DETAILS } from './nodes';
+
+function MermaidDiagram({ chart }) {
+  const ref = useRef(null);
+  const idRef = useRef(`mermaid-${Math.random().toString(36).slice(2)}`);
+
+  useEffect(() => {
+    if (!chart || !ref.current) return;
+    const id = idRef.current;
+    window.mermaid?.render(id, chart).then(({ svg }) => {
+      if (ref.current) ref.current.innerHTML = svg;
+    }).catch(() => {});
+  }, [chart]);
+
+  return (
+    <div ref={ref} style={{ width: '100%', overflowX: 'auto', marginTop: 8 }} />
+  );
+}
 
 function FactoryNode({ data, selected }) {
   const node = NODE_DETAILS[data.id];
   return (
     <>
-      <Handle type="target" position={Position.Left} style={{ background: node.border, width: 8, height: 8 }} />
+      {['left','right','top','bottom'].map(pos => ['source','target'].map(type => (
+        <Handle key={`${pos}-${type}`} type={type} position={Position[pos.charAt(0).toUpperCase()+pos.slice(1)]} id={`${pos}-${type}`} style={{ background: node.border, width: 6, height: 6, opacity: 0 }} />
+      )))}
+
       <div style={{
         background: node.color,
         border: `2px solid ${selected ? '#0F6E56' : node.border}`,
@@ -30,7 +51,6 @@ function FactoryNode({ data, selected }) {
         <div style={{ fontSize: 13, fontWeight: 700, color: node.text, letterSpacing: '-0.01em' }}>{node.label}</div>
         <div style={{ fontSize: 11, color: node.border, marginTop: 2, opacity: 0.85 }}>{node.role}</div>
       </div>
-      <Handle type="source" position={Position.Right} style={{ background: node.border, width: 8, height: 8 }} />
     </>
   );
 }
@@ -41,6 +61,30 @@ export default function App() {
   const [nodes, , onNodesChange] = useNodesState(INITIAL_NODES);
   const [edges, , onEdgesChange] = useEdgesState(INITIAL_EDGES);
   const [selected, setSelected] = useState(null);
+  const [mermaidReady, setMermaidReady] = useState(false);
+
+  useEffect(() => {
+    if (window.mermaid) { setMermaidReady(true); return; }
+    const script = document.createElement('script');
+    script.type = 'module';
+    script.textContent = `
+      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+      mermaid.initialize({ startOnLoad: false, theme: 'base', securityLevel: 'loose',
+        themeVariables: {
+          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+          fontSize: '12px', background: '#fff',
+          primaryColor: '#E1F5EE', primaryBorderColor: '#0F6E56', primaryTextColor: '#04342C',
+          secondaryColor: '#EEEDFE', secondaryBorderColor: '#534AB7', secondaryTextColor: '#26215C',
+          tertiaryColor: '#F1EFE8', tertiaryBorderColor: '#5F5E5A', tertiaryTextColor: '#2C2C2A',
+          lineColor: '#8a897f', edgeLabelBackground: '#fff',
+        }
+      });
+      window.mermaid = mermaid;
+      window.dispatchEvent(new Event('mermaid-ready'));
+    `;
+    document.head.appendChild(script);
+    window.addEventListener('mermaid-ready', () => setMermaidReady(true), { once: true });
+  }, []);
 
   const onNodeClick = useCallback((_, node) => {
     setSelected(prev => prev?.id === node.id ? null : node);
@@ -59,7 +103,7 @@ export default function App() {
           <div style={{ fontSize: 11, color: '#8a897f', marginTop: 6 }}>Click any node to explore</div>
         </div>
 
-        <div style={{ position: 'absolute', bottom: 20, left: 20, zIndex: 10, display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+        <div style={{ position: 'absolute', bottom: 20, left: 20, zIndex: 10, display: 'flex', gap: 12, flexWrap: 'wrap', background: 'rgba(251,251,250,0.92)', padding: '8px 14px', borderRadius: 8, border: '1px solid #e6e5e1', backdropFilter: 'blur(4px)' }}>
           {[
             { color: '#E1F5EE', border: '#0F6E56', label: 'Spine' },
             { color: '#EEEDFE', border: '#534AB7', label: 'Supporting systems' },
@@ -89,20 +133,21 @@ export default function App() {
           onNodeClick={onNodeClick}
           onPaneClick={onPaneClick}
           nodeTypes={nodeTypes}
+          connectionMode={ConnectionMode.Loose}
           fitView
           fitViewOptions={{ padding: 0.2 }}
           minZoom={0.3}
           maxZoom={2}
         >
           <Background color="#e6e5e1" gap={20} size={1} />
-          <Controls />
-          <MiniMap nodeColor={n => NODE_DETAILS[n.data?.id]?.color ?? '#eee'} />
+          <Controls position="bottom-right" />
+          <MiniMap nodeColor={n => NODE_DETAILS[n.data?.id]?.color ?? '#eee'} position="top-right" />
         </ReactFlow>
       </div>
 
       {detail && (
         <div style={{
-          width: 340,
+          width: 400,
           background: '#fff',
           borderLeft: '1px solid #e6e5e1',
           display: 'flex',
@@ -124,6 +169,12 @@ export default function App() {
             <div style={{ fontSize: 22, fontWeight: 700, color: '#1a1a18', letterSpacing: '-0.015em' }}>{detail.label}</div>
           </div>
           <div style={{ padding: '20px 24px', overflowY: 'auto', flex: 1 }}>
+            {detail.mermaid && mermaidReady && (
+              <div style={{ marginBottom: 20, borderBottom: '1px solid #e6e5e1', paddingBottom: 20 }}>
+                <div style={{ fontSize: 11, fontWeight: 650, letterSpacing: '.1em', textTransform: 'uppercase', color: '#8a897f', marginBottom: 8 }}>Subsystem diagram</div>
+                <MermaidDiagram chart={detail.mermaid} key={detail.label} />
+              </div>
+            )}
             <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
               {detail.details.map((d, i) => (
                 <li key={i} style={{ display: 'flex', gap: 10, marginBottom: 14, alignItems: 'flex-start' }}>
