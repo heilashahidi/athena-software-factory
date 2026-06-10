@@ -28,3 +28,8 @@
 * { box-sizing: border-box; }
 body { margin: 0; }
 #root { width: 100vw; height: 100vh; }
+
+@keyframes dashFlow {
+  from { stroke-dashoffset: 18; }
+  to   { stroke-dashoffset: 0;  }
+}

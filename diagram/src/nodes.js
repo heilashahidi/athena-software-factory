@@ -1,6 +1,7 @@
 export const NODE_DETAILS = {
   spec: {
     label: 'Spec',
+    icon: '≡',
     role: 'Source of truth',
     mermaid: `flowchart TB
   brief[/"Product brief · Linear / Jira / Notion"/] --> compiler["Spec compiler · brief to typed spec"]
@@ -41,6 +42,7 @@ export const NODE_DETAILS = {
   },
   router: {
     label: 'Risk Router',
+    icon: '◇',
     role: 'Tier assignment',
     color: '#FAEEDA',
     border: '#854F0B',
@@ -55,6 +57,7 @@ export const NODE_DETAILS = {
   },
   orchestration: {
     label: 'Orchestration',
+    icon: '⊕',
     role: 'Deterministic conductor',
     color: '#E1F5EE',
     border: '#0F6E56',
@@ -88,6 +91,7 @@ export const NODE_DETAILS = {
   },
   workers: {
     label: 'Workers',
+    icon: '◈',
     role: 'Same model, six harnesses',
     color: '#E1F5EE',
     border: '#0F6E56',
@@ -117,6 +121,7 @@ export const NODE_DETAILS = {
   },
   verification: {
     label: 'Verification',
+    icon: '✓',
     role: 'Defense in depth',
     color: '#E1F5EE',
     border: '#0F6E56',
@@ -153,6 +158,7 @@ export const NODE_DETAILS = {
   },
   review: {
     label: 'Review',
+    icon: '◎',
     role: 'Human-in-the-loop',
     color: '#E1F5EE',
     border: '#0F6E56',
@@ -184,6 +190,7 @@ export const NODE_DETAILS = {
   },
   pr: {
     label: 'PR',
+    icon: '↑',
     role: 'Deployable output',
     color: '#F1EFE8',
     border: '#5F5E5A',
@@ -198,6 +205,7 @@ export const NODE_DETAILS = {
   },
   intel: {
     label: 'Codebase Intelligence',
+    icon: '◉',
     role: 'Context engine',
     color: '#EEEDFE',
     border: '#534AB7',
@@ -231,6 +239,7 @@ export const NODE_DETAILS = {
   },
   learn: {
     label: 'Learning Loop',
+    icon: '↺',
     mermaid: `flowchart LR
   run["Factory run"] --> traces[("Traces · leading")]
   run --> deploy["Deploy"] --> dora[("Production · DORA")]
@@ -261,6 +270,7 @@ export const NODE_DETAILS = {
   },
   security: {
     label: 'Security Worker',
+    icon: '⊘',
     role: 'Adversarial reviewer',
     color: '#EEEDFE',
     border: '#534AB7',
@@ -275,6 +285,7 @@ export const NODE_DETAILS = {
   },
   comply: {
     label: 'Compliance Worker',
+    icon: '☑',
     role: 'Controls verifier',
     color: '#EEEDFE',
     border: '#534AB7',
