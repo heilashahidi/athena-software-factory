@@ -309,24 +309,18 @@ const dotStyle = { stroke: '#534AB7', strokeWidth: 1.5, strokeDasharray: '5 4' }
 const dotLabel = (text) => ({ label: text, labelStyle: { fill: '#534AB7', fontSize: 11 }, labelBgStyle: { fill: '#fbfbfa' } });
 
 export const INITIAL_EDGES = [
-  // ── Spine ─────────────────────────────────────────────────────────────────
-  { id: 'e-spec-router',    source: 'spec',         target: 'router',        type: 'smoothstep', style: { stroke: '#0F6E56', strokeWidth: 2 } },
-  { id: 'e-router-orch',    source: 'router',       target: 'orchestration', type: 'smoothstep', style: { stroke: '#0F6E56', strokeWidth: 2 } },
-  { id: 'e-orch-workers',   source: 'orchestration',target: 'workers',       type: 'smoothstep', style: { stroke: '#0F6E56', strokeWidth: 2 } },
-  { id: 'e-workers-verify', source: 'workers',      target: 'verification',  type: 'smoothstep', style: { stroke: '#0F6E56', strokeWidth: 2 } },
-  { id: 'e-verify-review',  source: 'verification', target: 'review',        type: 'smoothstep', style: { stroke: '#0F6E56', strokeWidth: 2 } },
-  { id: 'e-review-pr',      source: 'review',       target: 'pr',            type: 'smoothstep', style: { stroke: '#0F6E56', strokeWidth: 2 } },
-
-  // ── Codebase Intelligence ─────────────────────────────────────────────────
-  { id: 'e-intel-workers',  source: 'intel', target: 'workers',       type: 'smoothstep', style: dotStyle, ...dotLabel('context') },
-  { id: 'e-intel-orch',     source: 'intel', target: 'orchestration', type: 'smoothstep', style: dotStyle, ...dotLabel('context') },
-
-  // ── Learning Loop ─────────────────────────────────────────────────────────
-  { id: 'e-verify-learn',  source: 'verification', target: 'learn',   type: 'smoothstep', style: dotStyle, ...dotLabel('traces') },
-  { id: 'e-learn-workers', source: 'learn',        target: 'workers', type: 'smoothstep', style: dotStyle, ...dotLabel('skills, memory') },
-  { id: 'e-learn-intel',   source: 'learn',        target: 'intel',   type: 'smoothstep', style: dotStyle, ...dotLabel('exemplars') },
-
-  // ── Security + Compliance ─────────────────────────────────────────────────
-  { id: 'e-sec-verify',    source: 'security', target: 'verification', type: 'smoothstep', style: dotStyle, ...dotLabel('adversarial pass') },
-  { id: 'e-comply-review', source: 'comply',   target: 'review',       type: 'smoothstep', style: dotStyle, ...dotLabel('controls check') },
+  { id: 'e-spec-router',    source: 'spec',         target: 'router',        animated: false, style: { stroke: '#0F6E56', strokeWidth: 2 } },
+  { id: 'e-router-orch',    source: 'router',       target: 'orchestration', animated: false, style: { stroke: '#0F6E56', strokeWidth: 2 } },
+  { id: 'e-orch-workers',   source: 'orchestration',target: 'workers',       animated: false, style: { stroke: '#0F6E56', strokeWidth: 2 } },
+  { id: 'e-workers-verify', source: 'workers',      target: 'verification',  animated: false, style: { stroke: '#0F6E56', strokeWidth: 2 } },
+  { id: 'e-verify-review',  source: 'verification', target: 'review',        animated: false, style: { stroke: '#0F6E56', strokeWidth: 2 } },
+  { id: 'e-review-pr',      source: 'review',       target: 'pr',            animated: false, style: { stroke: '#0F6E56', strokeWidth: 2 } },
+  { id: 'e-intel-orch',     source: 'intel',        target: 'orchestration', animated: false, style: { stroke: '#534AB7', strokeWidth: 1.5, strokeDasharray: '5 4' }, label: 'context',         labelStyle: { fill: '#534AB7', fontSize: 11 }, labelBgStyle: { fill: '#fbfbfa' } },
+  { id: 'e-intel-workers',  source: 'intel',        target: 'workers',       animated: false, style: { stroke: '#534AB7', strokeWidth: 1.5, strokeDasharray: '5 4' }, label: 'context',         labelStyle: { fill: '#534AB7', fontSize: 11 }, labelBgStyle: { fill: '#fbfbfa' } },
+  { id: 'e-router-workers', source: 'router',       target: 'workers',       animated: false, style: { stroke: '#854F0B', strokeWidth: 1.5, strokeDasharray: '5 4' }, label: 'harness tier',    labelStyle: { fill: '#854F0B', fontSize: 11 }, labelBgStyle: { fill: '#fbfbfa' } },
+  { id: 'e-verify-learn',   source: 'verification', target: 'learn',         animated: false, style: { stroke: '#534AB7', strokeWidth: 1.5, strokeDasharray: '5 4' }, label: 'traces',          labelStyle: { fill: '#534AB7', fontSize: 11 }, labelBgStyle: { fill: '#fbfbfa' } },
+  { id: 'e-learn-workers',  source: 'learn',        target: 'workers',       animated: false, style: { stroke: '#534AB7', strokeWidth: 1.5, strokeDasharray: '5 4' }, label: 'skills, memory',  labelStyle: { fill: '#534AB7', fontSize: 11 }, labelBgStyle: { fill: '#fbfbfa' } },
+  { id: 'e-learn-intel',    source: 'learn',        target: 'intel',         animated: false, style: { stroke: '#534AB7', strokeWidth: 1.5, strokeDasharray: '5 4' }, label: 'exemplars',       labelStyle: { fill: '#534AB7', fontSize: 11 }, labelBgStyle: { fill: '#fbfbfa' } },
+  { id: 'e-sec-verify',     source: 'security',     target: 'verification',  animated: false, style: { stroke: '#534AB7', strokeWidth: 1.5, strokeDasharray: '5 4' }, label: 'adversarial pass',labelStyle: { fill: '#534AB7', fontSize: 11 }, labelBgStyle: { fill: '#fbfbfa' } },
+  { id: 'e-comply-verify',  source: 'comply',       target: 'verification',  animated: false, style: { stroke: '#534AB7', strokeWidth: 1.5, strokeDasharray: '5 4' }, label: 'controls check',  labelStyle: { fill: '#534AB7', fontSize: 11 }, labelBgStyle: { fill: '#fbfbfa' } },
 ];
