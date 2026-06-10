@@ -1,4 +1,5 @@
 import { useCallback, useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   ReactFlow,
   Background,
@@ -61,6 +62,7 @@ export default function App() {
   const [nodes, , onNodesChange] = useNodesState(INITIAL_NODES);
   const [edges, , onEdgesChange] = useEdgesState(INITIAL_EDGES);
   const [selected, setSelected] = useState(null);
+  const navigate = useNavigate();
   const [mermaidReady, setMermaidReady] = useState(false);
 
   useEffect(() => {
@@ -87,8 +89,13 @@ export default function App() {
   }, []);
 
   const onNodeClick = useCallback((_, node) => {
-    setSelected(prev => prev?.id === node.id ? null : node);
-  }, []);
+    const detail = NODE_DETAILS[node.data.id];
+    if (detail?.mermaid) {
+      navigate(`/node/${node.data.id}`);
+    } else {
+      setSelected(prev => prev?.id === node.id ? null : node);
+    }
+  }, [navigate]);
 
   const onPaneClick = useCallback(() => setSelected(null), []);
 
@@ -100,7 +107,7 @@ export default function App() {
         <div style={{ position: 'absolute', top: 20, left: 20, zIndex: 10 }}>
           <div style={{ fontSize: 20, fontWeight: 700, color: '#1a1a18', letterSpacing: '-0.02em' }}>Athena Digital</div>
           <div style={{ fontSize: 13, color: '#5f5e5a', marginTop: 2 }}>Software Factory — Master Architecture</div>
-          <div style={{ fontSize: 11, color: '#8a897f', marginTop: 6 }}>Click any node to explore</div>
+          <div style={{ fontSize: 11, color: '#8a897f', marginTop: 6 }}>Click a node to open its subsystem diagram</div>
         </div>
 
         <div style={{ position: 'absolute', bottom: 20, left: 20, zIndex: 10, display: 'flex', gap: 12, flexWrap: 'wrap', background: 'rgba(251,251,250,0.92)', padding: '8px 14px', borderRadius: 8, border: '1px solid #e6e5e1', backdropFilter: 'blur(4px)' }}>
