@@ -126,13 +126,8 @@ export default function App() {
 
   const onNodeClick = useCallback((_, node) => {
     if (dragged.current) return;
-    const detail = NODE_DETAILS[node.data.id];
-    if (detail?.mermaid) {
-      navigate(`/node/${node.data.id}`);
-    } else {
-      setSelected(prev => prev?.id === node.id ? null : node);
-    }
-  }, [navigate]);
+    setSelected(prev => prev?.id === node.id ? null : node);
+  }, []);
 
   const onPaneClick = useCallback(() => setSelected(null), []);
 
@@ -193,48 +188,55 @@ export default function App() {
 
       {detail && (
         <div style={{
-          width: 400,
+          width: 480,
           background: '#fff',
           borderLeft: '1px solid #e6e5e1',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
         }}>
-          <div style={{ padding: '24px 24px 16px', borderBottom: '1px solid #e6e5e1' }}>
-            <div style={{
-              display: 'inline-block',
-              background: detail.color,
-              border: `1.5px solid ${detail.border}`,
-              borderRadius: 6,
-              padding: '2px 10px',
-              fontSize: 11,
-              color: detail.border,
-              fontWeight: 600,
-              marginBottom: 10,
-            }}>{detail.role}</div>
-            <div style={{ fontSize: 22, fontWeight: 700, color: '#1a1a18', letterSpacing: '-0.015em' }}>{detail.label}</div>
+          {/* Header */}
+          <div style={{ padding: '20px 24px 14px', borderBottom: '1px solid #e6e5e1', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+            <div>
+              <div style={{
+                display: 'inline-block', background: detail.color,
+                border: `1.5px solid ${detail.border}`, borderRadius: 6,
+                padding: '2px 10px', fontSize: 11, color: detail.border,
+                fontWeight: 600, marginBottom: 8,
+              }}>{detail.role}</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: '#1a1a18', letterSpacing: '-0.015em' }}>{detail.label}</div>
+            </div>
+            <button onClick={() => setSelected(null)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: '#8a897f', padding: '0 4px', lineHeight: 1, flexShrink: 0 }}>×</button>
           </div>
-          <div style={{ padding: '20px 24px', overflowY: 'auto', flex: 1 }}>
-            {detail.mermaid && mermaidReady && (
-              <div style={{ marginBottom: 20, borderBottom: '1px solid #e6e5e1', paddingBottom: 20 }}>
-                <div style={{ fontSize: 11, fontWeight: 650, letterSpacing: '.1em', textTransform: 'uppercase', color: '#8a897f', marginBottom: 8 }}>Subsystem diagram</div>
-                <MermaidDiagram chart={detail.mermaid} key={detail.label} />
+
+          <div style={{ overflowY: 'auto', flex: 1 }}>
+            {/* Subsystem diagram */}
+            {detail.mermaid && (
+              <div style={{ padding: '20px 24px', borderBottom: '1px solid #e6e5e1' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <div style={{ fontSize: 11, fontWeight: 650, letterSpacing: '.1em', textTransform: 'uppercase', color: '#8a897f' }}>Subsystem diagram</div>
+                  <a href={`#/node/${selected?.data?.id}`} style={{ fontSize: 11, color: detail.border, textDecoration: 'none', fontWeight: 600 }}>Open full page →</a>
+                </div>
+                {mermaidReady
+                  ? <MermaidDiagram chart={detail.mermaid} key={detail.label} />
+                  : <div style={{ color: '#8a897f', fontSize: 12 }}>Loading diagram…</div>
+                }
               </div>
             )}
-            <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
-              {detail.details.map((d, i) => (
-                <li key={i} style={{ display: 'flex', gap: 10, marginBottom: 14, alignItems: 'flex-start' }}>
-                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: detail.border, marginTop: 6, flexShrink: 0 }} />
-                  <span style={{ fontSize: 13, color: '#2a2a28', lineHeight: 1.6 }}>{d}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div style={{ padding: '12px 24px', borderTop: '1px solid #e6e5e1' }}>
-            <button
-              onClick={() => setSelected(null)}
-              style={{ background: 'none', border: '1px solid #e6e5e1', borderRadius: 6, padding: '6px 14px', fontSize: 12, color: '#5f5e5a', cursor: 'pointer' }}
-            >Close</button>
+
+            {/* Bullet points */}
+            <div style={{ padding: '20px 24px' }}>
+              <div style={{ fontSize: 11, fontWeight: 650, letterSpacing: '.1em', textTransform: 'uppercase', color: '#8a897f', marginBottom: 14 }}>Key points</div>
+              <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+                {detail.details.map((d, i) => (
+                  <li key={i} style={{ display: 'flex', gap: 10, marginBottom: 14, alignItems: 'flex-start' }}>
+                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: detail.border, marginTop: 6, flexShrink: 0 }} />
+                    <span style={{ fontSize: 13, color: '#2a2a28', lineHeight: 1.6 }}>{d}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </div>
       )}
