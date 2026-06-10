@@ -291,7 +291,7 @@ export const NODE_DETAILS = {
 export const INITIAL_NODES = [
   // Spine — evenly spaced, centred on y=280
   { id: 'spec',          position: { x: 40,   y: 280 }, data: { id: 'spec' },          type: 'factory' },
-  { id: 'router',        position: { x: 240,  y: 280 }, data: { id: 'router' },         type: 'factory' },
+  { id: 'router',        position: { x: 230,  y: 235 }, data: { id: 'router' },         type: 'diamond' },
   { id: 'orchestration', position: { x: 460,  y: 280 }, data: { id: 'orchestration' },  type: 'factory' },
   { id: 'workers',       position: { x: 700,  y: 280 }, data: { id: 'workers' },         type: 'factory' },
   { id: 'verification',  position: { x: 950,  y: 280 }, data: { id: 'verification' },    type: 'factory' },

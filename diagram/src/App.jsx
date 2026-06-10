@@ -38,7 +38,6 @@ function FactoryNode({ data, selected }) {
       {['left','right','top','bottom'].map(pos => ['source','target'].map(type => (
         <Handle key={`${pos}-${type}`} type={type} position={Position[pos.charAt(0).toUpperCase()+pos.slice(1)]} id={`${pos}-${type}`} style={{ background: node.border, width: 6, height: 6, opacity: 0 }} />
       )))}
-
       <div style={{
         background: node.color,
         border: `2px solid ${selected ? '#0F6E56' : node.border}`,
@@ -56,7 +55,39 @@ function FactoryNode({ data, selected }) {
   );
 }
 
-const nodeTypes = { factory: FactoryNode };
+function DiamondNode({ data, selected }) {
+  const node = NODE_DETAILS[data.id];
+  const size = 110;
+  return (
+    <>
+      {['left','right','top','bottom'].map(pos => ['source','target'].map(type => (
+        <Handle key={`${pos}-${type}`} type={type} position={Position[pos.charAt(0).toUpperCase()+pos.slice(1)]} id={`${pos}-${type}`} style={{ background: node.border, width: 6, height: 6, opacity: 0 }} />
+      )))}
+      <div style={{ width: size, height: size, position: 'relative', cursor: 'pointer' }}>
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: node.color,
+          border: `2px solid ${selected ? '#0F6E56' : node.border}`,
+          transform: 'rotate(45deg)',
+          borderRadius: 6,
+          boxShadow: selected ? `0 0 0 3px #0F6E5640` : '0 1px 4px rgba(0,0,0,0.10)',
+          transition: 'box-shadow 0.15s',
+        }} />
+        <div style={{
+          position: 'absolute', inset: 0,
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center', textAlign: 'center',
+          padding: '0 12px',
+        }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: node.text, letterSpacing: '-0.01em', lineHeight: 1.2 }}>{node.label}</div>
+          <div style={{ fontSize: 10, color: node.border, marginTop: 2, opacity: 0.85, lineHeight: 1.2 }}>{node.role}</div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+const nodeTypes = { factory: FactoryNode, diamond: DiamondNode };
 
 export default function App() {
   const [nodes, , onNodesChange] = useNodesState(INITIAL_NODES);
