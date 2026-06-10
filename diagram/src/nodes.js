@@ -323,7 +323,7 @@ export const INITIAL_EDGES = [
   { id: 'e-router-workers', source: 'router',       target: 'workers',       markerEnd: gateArrow, style: { stroke: '#854F0B', strokeWidth: 1.5, strokeDasharray: '5 4' }, label: 'harness tier', labelStyle: { fill: '#854F0B', fontSize: 11 }, labelBgStyle: { fill: '#fbfbfa' } },
   { id: 'e-verify-learn',   source: 'verification', target: 'learn',         markerEnd: dotArrow, style: dotStyle, ...dotLabel('traces') },
   { id: 'e-learn-workers',  source: 'learn',        target: 'workers',       markerEnd: dotArrow, style: dotStyle, ...dotLabel('skills, memory') },
-  { id: 'e-learn-intel',    source: 'learn',        target: 'intel',         markerEnd: dotArrow, type: 'smoothstep', style: dotStyle, ...dotLabel('exemplars') },
+  { id: 'e-learn-intel',    source: 'learn',        target: 'intel',         markerEnd: dotArrow, style: dotStyle, ...dotLabel('exemplars') },
   { id: 'e-sec-verify',     source: 'security',     target: 'verification',  markerEnd: dotArrow, style: dotStyle, ...dotLabel('adversarial pass') },
   { id: 'e-comply-verify',  source: 'comply',       target: 'verification',  markerEnd: dotArrow, style: dotStyle, ...dotLabel('controls check') },
 ];
