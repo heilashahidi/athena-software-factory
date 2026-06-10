@@ -173,19 +173,23 @@ export const INITIAL_NODES = [
   { id: 'comply',        position: { x: 980,  y: 420 }, data: { id: 'comply' },          type: 'factory' },
 ];
 
+const spineArrow   = { type: 'arrow', color: '#0F6E56', width: 18, height: 18 };
+const dotArrow     = { type: 'arrow', color: '#534AB7', width: 14, height: 14 };
+const gateArrow    = { type: 'arrow', color: '#854F0B', width: 14, height: 14 };
+
 export const INITIAL_EDGES = [
-  { id: 'e-spec-router',     source: 'spec',         target: 'router',        animated: false, style: { stroke: '#0F6E56', strokeWidth: 2 } },
-  { id: 'e-router-orch',     source: 'router',       target: 'orchestration', animated: false, style: { stroke: '#0F6E56', strokeWidth: 2 } },
-  { id: 'e-orch-workers',    source: 'orchestration',target: 'workers',       animated: false, style: { stroke: '#0F6E56', strokeWidth: 2 } },
-  { id: 'e-workers-verify',  source: 'workers',      target: 'verification',  animated: false, style: { stroke: '#0F6E56', strokeWidth: 2 } },
-  { id: 'e-verify-review',   source: 'verification', target: 'review',        animated: false, style: { stroke: '#0F6E56', strokeWidth: 2 } },
-  { id: 'e-review-pr',       source: 'review',       target: 'pr',            animated: false, style: { stroke: '#0F6E56', strokeWidth: 2 } },
-  { id: 'e-intel-orch',      source: 'intel',        target: 'orchestration', animated: false, style: { stroke: '#534AB7', strokeWidth: 1.5, strokeDasharray: '5 4' }, label: 'context', labelStyle: { fill: '#534AB7', fontSize: 11 }, labelBgStyle: { fill: '#fbfbfa' } },
-  { id: 'e-intel-workers',   source: 'intel',        target: 'workers',       animated: false, style: { stroke: '#534AB7', strokeWidth: 1.5, strokeDasharray: '5 4' }, label: 'context', labelStyle: { fill: '#534AB7', fontSize: 11 }, labelBgStyle: { fill: '#fbfbfa' } },
-  { id: 'e-router-workers',  source: 'router',       target: 'workers',       animated: false, style: { stroke: '#854F0B', strokeWidth: 1.5, strokeDasharray: '5 4' }, label: 'harness tier', labelStyle: { fill: '#854F0B', fontSize: 11 }, labelBgStyle: { fill: '#fbfbfa' } },
-  { id: 'e-verify-learn',    source: 'verification', target: 'learn',         animated: false, style: { stroke: '#534AB7', strokeWidth: 1.5, strokeDasharray: '5 4' }, label: 'traces', labelStyle: { fill: '#534AB7', fontSize: 11 }, labelBgStyle: { fill: '#fbfbfa' } },
-  { id: 'e-learn-workers',   source: 'learn',        target: 'workers',       animated: false, style: { stroke: '#534AB7', strokeWidth: 1.5, strokeDasharray: '5 4' }, label: 'skills, memory', labelStyle: { fill: '#534AB7', fontSize: 11 }, labelBgStyle: { fill: '#fbfbfa' } },
-  { id: 'e-learn-intel',     source: 'learn',        target: 'intel',         animated: false, style: { stroke: '#534AB7', strokeWidth: 1.5, strokeDasharray: '5 4' }, label: 'exemplars', labelStyle: { fill: '#534AB7', fontSize: 11 }, labelBgStyle: { fill: '#fbfbfa' } },
-  { id: 'e-sec-verify',      source: 'security',     target: 'verification',  animated: false, style: { stroke: '#534AB7', strokeWidth: 1.5, strokeDasharray: '5 4' }, label: 'adversarial pass', labelStyle: { fill: '#534AB7', fontSize: 11 }, labelBgStyle: { fill: '#fbfbfa' } },
-  { id: 'e-comply-verify',   source: 'comply',       target: 'verification',  animated: false, style: { stroke: '#534AB7', strokeWidth: 1.5, strokeDasharray: '5 4' }, label: 'controls check', labelStyle: { fill: '#534AB7', fontSize: 11 }, labelBgStyle: { fill: '#fbfbfa' } },
+  { id: 'e-spec-router',     source: 'spec',         target: 'router',        markerEnd: spineArrow, style: { stroke: '#0F6E56', strokeWidth: 2 } },
+  { id: 'e-router-orch',     source: 'router',       target: 'orchestration', markerEnd: spineArrow, style: { stroke: '#0F6E56', strokeWidth: 2 } },
+  { id: 'e-orch-workers',    source: 'orchestration',target: 'workers',       markerEnd: spineArrow, style: { stroke: '#0F6E56', strokeWidth: 2 } },
+  { id: 'e-workers-verify',  source: 'workers',      target: 'verification',  markerEnd: spineArrow, style: { stroke: '#0F6E56', strokeWidth: 2 } },
+  { id: 'e-verify-review',   source: 'verification', target: 'review',        markerEnd: spineArrow, style: { stroke: '#0F6E56', strokeWidth: 2 } },
+  { id: 'e-review-pr',       source: 'review',       target: 'pr',            markerEnd: spineArrow, style: { stroke: '#0F6E56', strokeWidth: 2 } },
+  { id: 'e-intel-orch',      source: 'intel',        target: 'orchestration', markerEnd: dotArrow,   style: { stroke: '#534AB7', strokeWidth: 1.5, strokeDasharray: '5 4' }, label: 'context',         labelStyle: { fill: '#534AB7', fontSize: 11 }, labelBgStyle: { fill: '#fbfbfa' } },
+  { id: 'e-intel-workers',   source: 'intel',        target: 'workers',       markerEnd: dotArrow,   style: { stroke: '#534AB7', strokeWidth: 1.5, strokeDasharray: '5 4' }, label: 'context',         labelStyle: { fill: '#534AB7', fontSize: 11 }, labelBgStyle: { fill: '#fbfbfa' } },
+  { id: 'e-router-workers',  source: 'router',       target: 'workers',       markerEnd: gateArrow,  style: { stroke: '#854F0B', strokeWidth: 1.5, strokeDasharray: '5 4' }, label: 'harness tier',    labelStyle: { fill: '#854F0B', fontSize: 11 }, labelBgStyle: { fill: '#fbfbfa' } },
+  { id: 'e-verify-learn',    source: 'verification', target: 'learn',         markerEnd: dotArrow,   style: { stroke: '#534AB7', strokeWidth: 1.5, strokeDasharray: '5 4' }, label: 'traces',          labelStyle: { fill: '#534AB7', fontSize: 11 }, labelBgStyle: { fill: '#fbfbfa' } },
+  { id: 'e-learn-workers',   source: 'learn',        target: 'workers',       markerEnd: dotArrow,   style: { stroke: '#534AB7', strokeWidth: 1.5, strokeDasharray: '5 4' }, label: 'skills, memory',  labelStyle: { fill: '#534AB7', fontSize: 11 }, labelBgStyle: { fill: '#fbfbfa' } },
+  { id: 'e-learn-intel',     source: 'learn',        target: 'intel',         markerEnd: dotArrow,   style: { stroke: '#534AB7', strokeWidth: 1.5, strokeDasharray: '5 4' }, label: 'exemplars',       labelStyle: { fill: '#534AB7', fontSize: 11 }, labelBgStyle: { fill: '#fbfbfa' } },
+  { id: 'e-sec-verify',      source: 'security',     target: 'verification',  markerEnd: dotArrow,   style: { stroke: '#534AB7', strokeWidth: 1.5, strokeDasharray: '5 4' }, label: 'adversarial pass',labelStyle: { fill: '#534AB7', fontSize: 11 }, labelBgStyle: { fill: '#fbfbfa' } },
+  { id: 'e-comply-verify',   source: 'comply',       target: 'verification',  markerEnd: dotArrow,   style: { stroke: '#534AB7', strokeWidth: 1.5, strokeDasharray: '5 4' }, label: 'controls check',  labelStyle: { fill: '#534AB7', fontSize: 11 }, labelBgStyle: { fill: '#fbfbfa' } },
 ];
