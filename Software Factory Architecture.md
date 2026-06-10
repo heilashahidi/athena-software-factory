@@ -31,32 +31,32 @@ The spec-to-PR spine (solid), with codebase intelligence feeding context in and 
 flowchart LR
   spec(["Spec"])
   router{"Risk router"}
-  plan["Orchestration"]
-  build["Workers"]
-  verify["Verification"]
-  sec[["Security worker"]]
-  comply[["Compliance worker"]]
+  orchestration["Orchestration"]
+  workers["Workers"]
+  verification["Verification"]
   review["Review"]
   pr(["PR"])
   intel[["Codebase intelligence"]]
   learn[["Learning loop"]]
+  security[["Security worker"]]
+  comply[["Compliance worker"]]
 
-  spec --> router --> plan --> build --> verify --> review --> pr
-  router -.->|"harness tier"| build
-  sec -.->|"adversarial pass"| verify
-  comply -.->|"controls check"| verify
-  intel -.->|context| plan
-  intel -.->|context| build
-  verify -.->|traces| learn
-  learn -.->|"skills, rules, memory"| build
-  learn -.->|exemplars| intel
+  spec --> router --> orchestration --> workers --> verification --> review --> pr
+  router -.->|"harness tier"| workers
+  intel -.->|"context"| orchestration
+  intel -.->|"context"| workers
+  verification -.->|"traces"| learn
+  learn -.->|"skills, rules, memory"| workers
+  learn -.->|"exemplars"| intel
+  security -.->|"adversarial pass"| verification
+  comply -.->|"controls check"| verification
 
   classDef spine fill:#E1F5EE,stroke:#0F6E56,color:#04342C;
   classDef sub fill:#EEEDFE,stroke:#534AB7,color:#26215C;
   classDef io fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A;
   classDef gate fill:#FAEEDA,stroke:#854F0B,color:#412402;
-  class plan,build,verify,review spine
-  class intel,learn,sec,comply sub
+  class orchestration,workers,verification,review spine
+  class intel,learn,security,comply sub
   class spec,pr io
   class router gate
 ```
