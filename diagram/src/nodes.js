@@ -312,12 +312,12 @@ const dotStyle   = { stroke: '#534AB7', strokeWidth: 1.5, strokeDasharray: '5 4'
 const dotLabel   = (text) => ({ label: text, labelStyle: { fill: '#534AB7', fontSize: 11 }, labelBgStyle: { fill: '#fbfbfa' } });
 
 export const INITIAL_EDGES = [
-  { id: 'e-spec-router',    source: 'spec',         target: 'router',        markerEnd: spineArrow, style: { stroke: '#0F6E56', strokeWidth: 2 } },
-  { id: 'e-router-orch',    source: 'router',       target: 'orchestration', markerEnd: spineArrow, style: { stroke: '#0F6E56', strokeWidth: 2 } },
-  { id: 'e-orch-workers',   source: 'orchestration',target: 'workers',       markerEnd: spineArrow, style: { stroke: '#0F6E56', strokeWidth: 2 } },
-  { id: 'e-workers-verify', source: 'workers',      target: 'verification',  markerEnd: spineArrow, style: { stroke: '#0F6E56', strokeWidth: 2 } },
-  { id: 'e-verify-review',  source: 'verification', target: 'review',        markerEnd: spineArrow, style: { stroke: '#0F6E56', strokeWidth: 2 } },
-  { id: 'e-review-pr',      source: 'review',       target: 'pr',            markerEnd: spineArrow, style: { stroke: '#0F6E56', strokeWidth: 2 } },
+  { id: 'e-spec-router',    source: 'spec',         sourceHandle: 'right-source', target: 'router',        targetHandle: 'left-target',  markerEnd: spineArrow, style: { stroke: '#0F6E56', strokeWidth: 2 } },
+  { id: 'e-router-orch',    source: 'router',       sourceHandle: 'right-source', target: 'orchestration', targetHandle: 'left-target',  markerEnd: spineArrow, style: { stroke: '#0F6E56', strokeWidth: 2 } },
+  { id: 'e-orch-workers',   source: 'orchestration',sourceHandle: 'right-source', target: 'workers',       targetHandle: 'left-target',  markerEnd: spineArrow, style: { stroke: '#0F6E56', strokeWidth: 2 } },
+  { id: 'e-workers-verify', source: 'workers',      sourceHandle: 'right-source', target: 'verification',  targetHandle: 'left-target',  markerEnd: spineArrow, style: { stroke: '#0F6E56', strokeWidth: 2 } },
+  { id: 'e-verify-review',  source: 'verification', sourceHandle: 'right-source', target: 'review',        targetHandle: 'left-target',  markerEnd: spineArrow, style: { stroke: '#0F6E56', strokeWidth: 2 } },
+  { id: 'e-review-pr',      source: 'review',       sourceHandle: 'right-source', target: 'pr',            targetHandle: 'left-target',  markerEnd: spineArrow, style: { stroke: '#0F6E56', strokeWidth: 2 } },
   { id: 'e-intel-orch',     source: 'intel',        target: 'orchestration', markerEnd: dotArrow, style: dotStyle, ...dotLabel('context') },
   { id: 'e-intel-workers',  source: 'intel',        target: 'workers',       markerEnd: dotArrow, style: dotStyle, ...dotLabel('context') },
   { id: 'e-router-workers', source: 'router',       target: 'workers',       markerEnd: gateArrow, style: { stroke: '#854F0B', strokeWidth: 1.5, strokeDasharray: '5 4' }, label: 'harness tier', labelStyle: { fill: '#854F0B', fontSize: 11 }, labelBgStyle: { fill: '#fbfbfa' } },
