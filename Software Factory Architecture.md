@@ -4,7 +4,7 @@ Spec-driven, skill-composed, eval-gated: turns a feature spec into a reviewable,
 
 Each `mermaid` block is independent (paste into mermaid.live, GitHub, or VS Code). Sections follow the spine: spec → codebase intelligence → orchestration → workers → verification → review → PR, with the learning loop feeding back.
 
-**[→ Interactive diagram](diagram/)** — click any node to explore the architecture.
+**[→ Interactive diagram](diagram-dist/)** — click any node to explore the architecture.
 
 ---
 

@@ -4,6 +4,6 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-  base: '/athena-software-factory/diagram/',
+  base: '/athena-software-factory/diagram-dist/',
   build: { outDir: '../diagram-dist' },
 })
