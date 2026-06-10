@@ -88,7 +88,13 @@ export default function App() {
     window.addEventListener('mermaid-ready', () => setMermaidReady(true), { once: true });
   }, []);
 
+  const dragged = useRef(false);
+
+  const onNodeDragStart = useCallback(() => { dragged.current = false; }, []);
+  const onNodeDrag = useCallback(() => { dragged.current = true; }, []);
+
   const onNodeClick = useCallback((_, node) => {
+    if (dragged.current) return;
     const detail = NODE_DETAILS[node.data.id];
     if (detail?.mermaid) {
       navigate(`/node/${node.data.id}`);
@@ -138,6 +144,8 @@ export default function App() {
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onNodeClick={onNodeClick}
+          onNodeDragStart={onNodeDragStart}
+          onNodeDrag={onNodeDrag}
           onPaneClick={onPaneClick}
           nodeTypes={nodeTypes}
           connectionMode={ConnectionMode.Loose}
