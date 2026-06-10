@@ -151,13 +151,17 @@ const nodeTypes = { factory: FactoryNode, diamond: DiamondNode };
 // ─── Floating panel ───────────────────────────────────────────────────────────
 function FloatingPanel({ selected, detail, mermaidReady, onClose }) {
   const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [dragging, setDragging] = useState(false);
 
   const onHeaderMouseDown = (e) => {
+    if (e.target.closest('button')) return;
     e.preventDefault();
+    setDragging(true);
     const sx = e.clientX - offset.x;
     const sy = e.clientY - offset.y;
     const onMove = (ev) => setOffset({ x: ev.clientX - sx, y: ev.clientY - sy });
     const onUp = () => {
+      setDragging(false);
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
     };
@@ -172,74 +176,130 @@ function FloatingPanel({ selected, detail, mermaidReady, onClose }) {
       top: selected.initY + offset.y,
       width: PANEL_W,
       maxHeight: 'calc(100vh - 32px)',
-      background: '#fff',
-      border: '1px solid #e0dfd9',
-      borderRadius: 14,
-      boxShadow: '0 12px 40px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.07)',
+      background: '#ffffff',
+      borderRadius: 16,
+      boxShadow: '0 0 0 1px rgba(0,0,0,0.06), 0 4px 8px rgba(0,0,0,0.05), 0 16px 40px rgba(0,0,0,0.11), 0 32px 64px rgba(0,0,0,0.05)',
       display: 'flex',
       flexDirection: 'column',
       overflow: 'hidden',
       zIndex: 1000,
+      animation: 'panelIn 0.2s cubic-bezier(0.16,1,0.3,1)',
     }}>
-      {/* Header / drag handle */}
+
+      {/* Header */}
       <div
         onMouseDown={onHeaderMouseDown}
         style={{
-          padding: '14px 18px 12px',
-          borderBottom: '1px solid #e6e5e1',
-          display: 'flex',
-          alignItems: 'flex-start',
-          justifyContent: 'space-between',
-          gap: 12,
-          cursor: 'grab',
-          userSelect: 'none',
           background: detail.color,
+          cursor: dragging ? 'grabbing' : 'grab',
+          userSelect: 'none',
+          borderBottom: `1px solid ${detail.border}22`,
         }}
       >
-        <div>
-          <div style={{
-            display: 'inline-block',
-            background: 'rgba(255,255,255,0.72)',
-            border: `1.5px solid ${detail.border}`,
-            borderRadius: 5,
-            padding: '2px 8px',
-            fontSize: 10,
-            color: detail.border,
-            fontWeight: 600,
-            marginBottom: 7,
-            letterSpacing: '0.05em',
-            textTransform: 'uppercase',
-          }}>{detail.role}</div>
-          <div style={{ fontSize: 18, fontWeight: 700, color: detail.text ?? '#1a1a18', letterSpacing: '-0.015em', display: 'flex', alignItems: 'center', gap: 8 }}>
-            {detail.icon && <span style={{ fontSize: 16 }}>{detail.icon}</span>}
-            {detail.label}
+        {/* Grip dots */}
+        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 10, paddingBottom: 6 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 4px)', gap: '3px 4px' }}>
+            {Array(6).fill(0).map((_, i) => (
+              <div key={i} style={{ width: 4, height: 4, borderRadius: '50%', background: detail.border, opacity: 0.3 }} />
+            ))}
           </div>
         </div>
-        <button
-          onClick={onClose}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: detail.text ?? '#8a897f', padding: 0, lineHeight: 1, flexShrink: 0, marginTop: 4, opacity: 0.55 }}
-        >×</button>
+
+        {/* Title row */}
+        <div style={{ padding: '0 18px 16px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            {/* Icon badge */}
+            {detail.icon && (
+              <div style={{
+                width: 36, height: 36, borderRadius: 10,
+                background: detail.border,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 16, color: '#fff',
+                flexShrink: 0,
+                boxShadow: `0 2px 8px ${detail.border}55`,
+              }}>{detail.icon}</div>
+            )}
+            <div>
+              <div style={{ fontSize: 17, fontWeight: 700, color: detail.text ?? '#1a1a18', letterSpacing: '-0.02em', lineHeight: 1.25 }}>
+                {detail.label}
+              </div>
+              <div style={{
+                marginTop: 4,
+                display: 'inline-flex', alignItems: 'center',
+                background: 'rgba(255,255,255,0.6)',
+                border: `1px solid ${detail.border}40`,
+                borderRadius: 20,
+                padding: '2px 9px',
+                fontSize: 10, fontWeight: 600,
+                color: detail.border,
+                letterSpacing: '0.04em',
+                textTransform: 'uppercase',
+              }}>{detail.role}</div>
+            </div>
+          </div>
+
+          {/* Close button */}
+          <button
+            onClick={onClose}
+            style={{
+              width: 26, height: 26, borderRadius: '50%',
+              background: 'rgba(255,255,255,0.55)',
+              border: `1px solid ${detail.border}30`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer',
+              fontSize: 16, lineHeight: 1,
+              color: detail.text ?? '#5f5e5a',
+              flexShrink: 0,
+              marginTop: 2,
+              transition: 'background 0.12s',
+            }}
+          >×</button>
+        </div>
       </div>
 
-      <div style={{ overflowY: 'auto', flex: 1 }}>
+      {/* Body */}
+      <div className="panel-body" style={{ overflowY: 'auto', flex: 1 }}>
         {detail.mermaid && (
-          <div style={{ padding: '16px 18px', borderBottom: '1px solid #e6e5e1' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-              <div style={{ fontSize: 10, fontWeight: 650, letterSpacing: '.1em', textTransform: 'uppercase', color: '#8a897f' }}>Subsystem diagram</div>
-              <a href={`#/node/${selected.id}`} style={{ fontSize: 11, color: detail.border, textDecoration: 'none', fontWeight: 600 }}>Full page →</a>
+          <div style={{ padding: '18px 20px', borderBottom: '1px solid #f0efeb' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', color: '#b0afa9' }}>
+                Subsystem diagram
+              </span>
+              <a
+                href={`#/node/${selected.id}`}
+                style={{
+                  fontSize: 11, fontWeight: 600, textDecoration: 'none',
+                  color: detail.border,
+                  background: `${detail.border}12`,
+                  border: `1px solid ${detail.border}28`,
+                  borderRadius: 6,
+                  padding: '3px 9px',
+                }}
+              >Full page →</a>
             </div>
             {mermaidReady
               ? <MermaidDiagram chart={detail.mermaid} key={detail.label} />
-              : <div style={{ color: '#8a897f', fontSize: 12 }}>Loading…</div>}
+              : <div style={{ color: '#b0afa9', fontSize: 12, padding: '4px 0' }}>Loading…</div>}
           </div>
         )}
-        <div style={{ padding: '16px 18px' }}>
-          <div style={{ fontSize: 10, fontWeight: 650, letterSpacing: '.1em', textTransform: 'uppercase', color: '#8a897f', marginBottom: 12 }}>Key points</div>
-          <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+
+        <div style={{ padding: '18px 20px 24px' }}>
+          <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', color: '#b0afa9' }}>
+            Key points
+          </span>
+          <ul style={{ margin: '14px 0 0', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 11 }}>
             {detail.details.map((d, i) => (
-              <li key={i} style={{ display: 'flex', gap: 10, marginBottom: 12, alignItems: 'flex-start' }}>
-                <div style={{ width: 5, height: 5, borderRadius: '50%', background: detail.border, marginTop: 7, flexShrink: 0 }} />
-                <span style={{ fontSize: 13, color: '#2a2a28', lineHeight: 1.6 }}>{d}</span>
+              <li key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                <div style={{
+                  width: 20, height: 20, borderRadius: '50%',
+                  background: `${detail.border}16`,
+                  border: `1.5px solid ${detail.border}38`,
+                  color: detail.border,
+                  fontSize: 10, fontWeight: 700, lineHeight: 1,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0, marginTop: 2,
+                }}>{i + 1}</div>
+                <span style={{ fontSize: 13, color: '#2c2c2a', lineHeight: 1.65 }}>{d}</span>
               </li>
             ))}
           </ul>

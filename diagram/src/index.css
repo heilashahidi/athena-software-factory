@@ -33,3 +33,13 @@ body { margin: 0; }
   from { stroke-dashoffset: 18; }
   to   { stroke-dashoffset: 0;  }
 }
+
+@keyframes panelIn {
+  from { opacity: 0; transform: translateY(8px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)   scale(1);    }
+}
+
+.panel-body::-webkit-scrollbar { width: 4px; }
+.panel-body::-webkit-scrollbar-track { background: transparent; }
+.panel-body::-webkit-scrollbar-thumb { background: #d4d3cd; border-radius: 4px; }
+.panel-body::-webkit-scrollbar-thumb:hover { background: #b5b4ae; }
