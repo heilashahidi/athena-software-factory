@@ -305,30 +305,28 @@ export const INITIAL_NODES = [
   { id: 'comply',        position: { x: 1180, y: 480 }, data: { id: 'comply' },          type: 'factory' },
 ];
 
-const spineArrow = { type: 'arrow', color: '#0F6E56', width: 18, height: 18 };
-const dotArrow   = { type: 'arrow', color: '#534AB7', width: 14, height: 14 };
-const dotStyle   = { stroke: '#534AB7', strokeWidth: 1.5, strokeDasharray: '5 4' };
-const dotLabel   = (text) => ({ label: text, labelStyle: { fill: '#534AB7', fontSize: 11 }, labelBgStyle: { fill: '#fbfbfa' } });
+const dotStyle = { stroke: '#534AB7', strokeWidth: 1.5, strokeDasharray: '5 4' };
+const dotLabel = (text) => ({ label: text, labelStyle: { fill: '#534AB7', fontSize: 11 }, labelBgStyle: { fill: '#fbfbfa' } });
 
 export const INITIAL_EDGES = [
   // ── Spine ─────────────────────────────────────────────────────────────────
-  { id: 'e-spec-router',    source: 'spec',         sourceHandle: 'right-source', target: 'router',        targetHandle: 'left-target',  markerEnd: spineArrow, style: { stroke: '#0F6E56', strokeWidth: 2 } },
-  { id: 'e-router-orch',    source: 'router',       sourceHandle: 'right-source', target: 'orchestration', targetHandle: 'left-target',  markerEnd: spineArrow, style: { stroke: '#0F6E56', strokeWidth: 2 } },
-  { id: 'e-orch-workers',   source: 'orchestration',sourceHandle: 'right-source', target: 'workers',       targetHandle: 'left-target',  markerEnd: spineArrow, style: { stroke: '#0F6E56', strokeWidth: 2 } },
-  { id: 'e-workers-verify', source: 'workers',      sourceHandle: 'right-source', target: 'verification',  targetHandle: 'left-target',  markerEnd: spineArrow, style: { stroke: '#0F6E56', strokeWidth: 2 } },
-  { id: 'e-verify-review',  source: 'verification', sourceHandle: 'right-source', target: 'review',        targetHandle: 'left-target',  markerEnd: spineArrow, style: { stroke: '#0F6E56', strokeWidth: 2 } },
-  { id: 'e-review-pr',      source: 'review',       sourceHandle: 'right-source', target: 'pr',            targetHandle: 'left-target',  markerEnd: spineArrow, style: { stroke: '#0F6E56', strokeWidth: 2 } },
+  { id: 'e-spec-router',    source: 'spec',         sourceHandle: 'right-source', target: 'router',        targetHandle: 'left-target',  style: { stroke: '#0F6E56', strokeWidth: 2 } },
+  { id: 'e-router-orch',    source: 'router',       sourceHandle: 'right-source', target: 'orchestration', targetHandle: 'left-target',  style: { stroke: '#0F6E56', strokeWidth: 2 } },
+  { id: 'e-orch-workers',   source: 'orchestration',sourceHandle: 'right-source', target: 'workers',       targetHandle: 'left-target',  style: { stroke: '#0F6E56', strokeWidth: 2 } },
+  { id: 'e-workers-verify', source: 'workers',      sourceHandle: 'right-source', target: 'verification',  targetHandle: 'left-target',  style: { stroke: '#0F6E56', strokeWidth: 2 } },
+  { id: 'e-verify-review',  source: 'verification', sourceHandle: 'right-source', target: 'review',        targetHandle: 'left-target',  style: { stroke: '#0F6E56', strokeWidth: 2 } },
+  { id: 'e-review-pr',      source: 'review',       sourceHandle: 'right-source', target: 'pr',            targetHandle: 'left-target',  style: { stroke: '#0F6E56', strokeWidth: 2 } },
 
   // ── Codebase Intelligence ─────────────────────────────────────────────────
-  { id: 'e-intel-workers',  source: 'intel', sourceHandle: 'bottom-source', target: 'workers',       targetHandle: 'top-target',   type: 'straight',   markerEnd: dotArrow, style: dotStyle, ...dotLabel('context') },
-  { id: 'e-intel-orch',     source: 'intel', sourceHandle: 'left-source',   target: 'orchestration', targetHandle: 'top-target',   type: 'smoothstep', markerEnd: dotArrow, style: dotStyle, ...dotLabel('context') },
+  { id: 'e-intel-workers',  source: 'intel', sourceHandle: 'bottom-source', target: 'workers',       targetHandle: 'top-target',   type: 'straight',   style: dotStyle, ...dotLabel('context') },
+  { id: 'e-intel-orch',     source: 'intel', sourceHandle: 'left-source',   target: 'orchestration', targetHandle: 'top-target',   type: 'smoothstep', style: dotStyle, ...dotLabel('context') },
 
   // ── Learning Loop ─────────────────────────────────────────────────────────
-  { id: 'e-verify-learn',  source: 'verification', sourceHandle: 'bottom-source', target: 'learn',   targetHandle: 'right-target',  type: 'smoothstep', markerEnd: dotArrow, style: dotStyle, ...dotLabel('traces') },
-  { id: 'e-learn-workers', source: 'learn',        sourceHandle: 'top-source',    target: 'workers', targetHandle: 'bottom-target', type: 'straight',   markerEnd: dotArrow, style: dotStyle, ...dotLabel('skills, memory') },
-  { id: 'e-learn-intel',   source: 'learn',        sourceHandle: 'left-source',   target: 'intel',   targetHandle: 'left-target',   type: 'smoothstep', markerEnd: dotArrow, style: dotStyle, ...dotLabel('exemplars') },
+  { id: 'e-verify-learn',  source: 'verification', sourceHandle: 'bottom-source', target: 'learn',   targetHandle: 'right-target',  type: 'smoothstep', style: dotStyle, ...dotLabel('traces') },
+  { id: 'e-learn-workers', source: 'learn',        sourceHandle: 'top-source',    target: 'workers', targetHandle: 'bottom-target', type: 'straight',   style: dotStyle, ...dotLabel('skills, memory') },
+  { id: 'e-learn-intel',   source: 'learn',        sourceHandle: 'left-source',   target: 'intel',   targetHandle: 'left-target',   type: 'smoothstep', style: dotStyle, ...dotLabel('exemplars') },
 
   // ── Security + Compliance ─────────────────────────────────────────────────
-  { id: 'e-sec-verify',    source: 'security', sourceHandle: 'top-source', target: 'verification', targetHandle: 'bottom-target', type: 'straight',   markerEnd: dotArrow, style: dotStyle, ...dotLabel('adversarial pass') },
-  { id: 'e-comply-review', source: 'comply',   sourceHandle: 'top-source', target: 'review',       targetHandle: 'bottom-target', type: 'straight',   markerEnd: dotArrow, style: dotStyle, ...dotLabel('controls check') },
+  { id: 'e-sec-verify',    source: 'security', sourceHandle: 'top-source', target: 'verification', targetHandle: 'bottom-target', type: 'straight', style: dotStyle, ...dotLabel('adversarial pass') },
+  { id: 'e-comply-review', source: 'comply',   sourceHandle: 'top-source', target: 'review',       targetHandle: 'bottom-target', type: 'straight', style: dotStyle, ...dotLabel('controls check') },
 ];
